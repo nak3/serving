@@ -90,8 +90,17 @@ func (rs *RevisionSpec) SetDefaults(ctx context.Context) {
 		container.ReadinessProbe.TCPSocket = &corev1.TCPSocketAction{}
 	}
 
+	if container.ReadinessProbe.TimeoutSeconds == 0 {
+		container.ReadinessProbe.TimeoutSeconds = 1
+	}
+	if container.ReadinessProbe.PeriodSeconds == 0 {
+		container.ReadinessProbe.PeriodSeconds = 10
+	}
 	if container.ReadinessProbe.SuccessThreshold == 0 {
 		container.ReadinessProbe.SuccessThreshold = 1
+	}
+	if container.ReadinessProbe.FailureThreshold == 0 {
+		container.ReadinessProbe.FailureThreshold = 3
 	}
 
 	vms := container.VolumeMounts
