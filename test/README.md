@@ -225,4 +225,4 @@ the header.
 
 If you have configured your cluster to use a resolvable domain, you can use the
 `--resolvabledomain` flag to indicate that the test should make requests
-directly against `Route.Status.Domain` and does not need to spoof the `Host`.
+directly against `Route.Status.URL.Host` and does not need to spoof the `Host`.
