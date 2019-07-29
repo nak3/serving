@@ -111,12 +111,12 @@ for it to be in the state you want it to be in (or timeout) use
 err = pkgTest.WaitForEndpointState(
         clients.KubeClient,
         logger,
-        updatedRoute.Status.Domain,
+        updatedRoute.Status.URL.Host,
         pkgTest.EventuallyMatchesBody(expectedText),
         "SomeDescription",
         test.ServingFlags.ResolvableDomain)
 if err != nil {
-    t.Fatalf("The endpoint for Route %s at domain %s didn't serve the expected text \"%s\": %v", routeName, updatedRoute.Status.Domain, expectedText, err)
+    t.Fatalf("The endpoint for Route %s at domain %s didn't serve the expected text \"%s\": %v", routeName, updatedRoute.Status.URL.Host, expectedText, err)
 }
 ```
 
@@ -132,8 +132,8 @@ deployed service, you can directly use the `SpoofingClient` that
 
 ```go
 // Error handling elided for brevity, but you know better.
-client, err := pkgTest.NewSpoofingClient(clients.KubeClient.Kube, logger, route.Status.Domain, test.ServingFlags.ResolvableDomain)
-req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s", route.Status.Domain), nil)
+client, err := pkgTest.NewSpoofingClient(clients.KubeClient.Kube, logger, route.Status.URL.Host, test.ServingFlags.ResolvableDomain)
+req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s", route.Status.URL.Host), nil)
 
 // Single request.
 resp, err := client.Do(req)
