@@ -17,12 +17,16 @@ limitations under the License.
 package autoscaler
 
 import (
+	"fmt"
+
 	"errors"
 	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/serving/pkg/autoscaler/aggregation"
+
+	rbase "knative.dev/serving/pkg/reconciler"
 
 	"go.uber.org/zap"
 	av1alpha1 "knative.dev/serving/pkg/apis/autoscaling/v1alpha1"
@@ -81,7 +85,7 @@ type StatMessage struct {
 type Collector interface {
 	// CreateOrUpdate either creates a collection for the given metric or update it, should
 	// it already exist.
-	CreateOrUpdate(*av1alpha1.Metric) error
+	CreateOrUpdate(*av1alpha1.Metric, *rbase.Base) error
 	// Record allows stats to be captured that came from outside the Collector.
 	Record(key types.NamespacedName, stat Stat)
 	// Delete deletes a Metric and halts collection.
@@ -126,7 +130,7 @@ func NewMetricCollector(statsScraperFactory StatsScraperFactory, logger *zap.Sug
 // CreateOrUpdate either creates a collection for the given metric or update it, should
 // it already exist.
 // Map access optimized via double-checked locking.
-func (c *MetricCollector) CreateOrUpdate(metric *av1alpha1.Metric) error {
+func (c *MetricCollector) CreateOrUpdate(metric *av1alpha1.Metric, r *rbase.Base) error {
 	scraper, err := c.statsScraperFactory(metric)
 	if err != nil {
 		return err
@@ -153,7 +157,7 @@ func (c *MetricCollector) CreateOrUpdate(metric *av1alpha1.Metric) error {
 		return nil
 	}
 
-	c.collections[key] = newCollection(metric, scraper, c.logger)
+	c.collections[key] = newCollection(metric, scraper, c.logger, r)
 	return nil
 }
 
@@ -238,7 +242,7 @@ func (c *collection) getScraper() StatsScraper {
 
 // newCollection creates a new collection, which uses the given scraper to
 // collect stats every scrapeTickInterval.
-func newCollection(metric *av1alpha1.Metric, scraper StatsScraper, logger *zap.SugaredLogger) *collection {
+func newCollection(metric *av1alpha1.Metric, scraper StatsScraper, logger *zap.SugaredLogger, r *rbase.Base) *collection {
 	c := &collection{
 		metric:             metric,
 		concurrencyBuckets: aggregation.NewTimedFloat64Buckets(BucketSize),
@@ -266,9 +270,11 @@ func newCollection(metric *av1alpha1.Metric, scraper StatsScraper, logger *zap.S
 				if message != nil {
 					c.record(message.Stat)
 				}
+				c.statusRecord(metric, err, r)
 			}
 		}
 	}()
+	fmt.Printf("recorded 2 !!!!!!!!!!!!!!!!! \n %+v \n", c.metric.Status) // output for debug
 
 	return c
 }
@@ -287,6 +293,24 @@ func (c *collection) currentMetric() *av1alpha1.Metric {
 	defer c.metricMutex.RUnlock()
 
 	return c.metric
+}
+
+// record adds a stat to the current collection.
+func (c *collection) statusRecord(metric *av1alpha1.Metric, err error, r *rbase.Base) {
+	if err == nil {
+		c.metric.Status.MarkReady()
+		metric.Status.MarkReady()
+	} else {
+		c.metric.Status.MarkNotReady("MetricsNotAvailable", err.Error())
+		metric.Status.MarkNotReady("MetricsNotAvailable", err.Error())
+	}
+	//	c.updateMetric(metric)
+
+	existing := metric.DeepCopy()
+	existing.Status = existing.Status
+	r.ServingClientSet.AutoscalingV1alpha1().Metrics(existing.Namespace).UpdateStatus(existing)
+
+	fmt.Printf("recorded !!!!!!!!!!!!!!!!! \n %+v \n", c.metric.Status) // output for debug
 }
 
 // record adds a stat to the current collection.

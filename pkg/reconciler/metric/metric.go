@@ -27,6 +27,7 @@ import (
 	listers "knative.dev/serving/pkg/client/listers/autoscaling/v1alpha1"
 	rbase "knative.dev/serving/pkg/reconciler"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 )
@@ -60,7 +61,8 @@ func (r *reconciler) Reconcile(ctx context.Context, key string) error {
 		return errors.Wrapf(err, "failed to fetch metric %q", key)
 	}
 
-	if err := r.collector.CreateOrUpdate(metric); err != nil {
+	if err := r.collector.CreateOrUpdate(metric, r.Base); err != nil {
+		r.Recorder.Eventf(metric, corev1.EventTypeWarning, "UpdateFailed", "Failed to initiate or update %s/%s", namespace, name)
 		return errors.Wrapf(err, "failed to initiate or update scraping")
 	}
 	return nil
