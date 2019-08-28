@@ -72,7 +72,7 @@ func NewCertManagerConfigFromConfigMap(configMap *corev1.ConfigMap) (*CertManage
 	if v, ok := configMap.Data[issuerKindKey]; ok {
 		config.IssuerKind = strings.ToLower(v)
 		switch config.IssuerKind {
-		case "acme", "ca", "self-signing":
+		case "acme", "ca", "selfsigned":
 		default:
 			return nil, fmt.Errorf("IssuerKind %q is not supported", config.IssuerKind)
 		}
@@ -93,7 +93,7 @@ func validate(config *CertManagerConfig) (*CertManagerConfig, error) {
 		if *config.SolverConfig != (certmanagerv1alpha1.SolverConfig{}) {
 			return nil, fmt.Errorf("IssuerKind %q must not set solverConfig", config.IssuerKind)
 		}
-	case "self-signing":
+	case "selfsigned":
 		if *config.SolverConfig != (certmanagerv1alpha1.SolverConfig{}) {
 			return nil, fmt.Errorf("IssuerKind %q must not set solverConfig", config.IssuerKind)
 		}

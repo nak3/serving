@@ -39,7 +39,7 @@ data:
 
     # issuerKind is a type of issuer.
     # Please refer to `Supported Issuer types` in https://docs.cert-manager.io/en/latest/reference/issuers.html#supported-issuer-types
-    # Currently supported values: acme, ca.
+    # Currently supported values: acme, ca, selfsigned.
     issuerKind: acme
 
     # issuerRef is a reference to the issuer for this certificate.
