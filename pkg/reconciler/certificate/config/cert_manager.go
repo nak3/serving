@@ -88,11 +88,7 @@ func validate(config *CertManagerConfig) (*CertManagerConfig, error) {
 		if config.SolverConfig.HTTP01 == nil && config.SolverConfig.DNS01 == nil {
 			return nil, fmt.Errorf("IssuerKind %q must set solverConfig", config.IssuerKind)
 		}
-	case "ca":
-		if *config.SolverConfig != (certmanagerv1alpha1.SolverConfig{}) {
-			return nil, fmt.Errorf("IssuerKind %q must not set solverConfig", config.IssuerKind)
-		}
-	case "selfsigned":
+	case "ca" || "selfsigned":
 		if *config.SolverConfig != (certmanagerv1alpha1.SolverConfig{}) {
 			return nil, fmt.Errorf("IssuerKind %q must not set solverConfig", config.IssuerKind)
 		}
