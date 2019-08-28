@@ -35,7 +35,9 @@ const (
 	// configuration related to Cert-Manager.
 	CertManagerConfigName = "config-certmanager"
 
-	defaultIssuerKind = "acme"
+	defaultIssuerKind = "selfsigned"
+	// TODO: comment
+	defaultCompatibleIssuerKind = "acme"
 )
 
 // CertManagerConfig contains Cert-Manager related configuration defined in the
@@ -52,8 +54,11 @@ func NewCertManagerConfigFromConfigMap(configMap *corev1.ConfigMap) (*CertManage
 
 	config := &CertManagerConfig{
 		SolverConfig: &certmanagerv1alpha1.SolverConfig{},
-		IssuerRef:    &certmanagerv1alpha1.ObjectReference{},
-		IssuerKind:   defaultIssuerKind,
+		IssuerRef: &certmanagerv1alpha1.ObjectReference{
+			Kind: "ClusterIssuer",
+			Name: "knative-selfsigned-issuer",
+		},
+		IssuerKind: defaultIssuerKind,
 	}
 
 	if v, ok := configMap.Data[solverConfigKey]; ok {
@@ -76,6 +81,12 @@ func NewCertManagerConfigFromConfigMap(configMap *corev1.ConfigMap) (*CertManage
 			return nil, fmt.Errorf("IssuerKind %q is not supported", config.IssuerKind)
 		}
 	}
+
+	// TODO: comment For compatibility
+	if *config.SolverConfig != (certmanagerv1alpha1.SolverConfig{}) && *config.IssuerRef != (certmanagerv1alpha1.ObjectReference{}) {
+		config.IssuerKind = defaultCompatibleIssuerKind
+	}
+
 	return validate(config)
 }
 
@@ -88,7 +99,7 @@ func validate(config *CertManagerConfig) (*CertManagerConfig, error) {
 		if config.SolverConfig.HTTP01 == nil && config.SolverConfig.DNS01 == nil {
 			return nil, fmt.Errorf("IssuerKind %q must set solverConfig", config.IssuerKind)
 		}
-	case "ca" || "selfsigned":
+	case "ca", "selfsigned":
 		if *config.SolverConfig != (certmanagerv1alpha1.SolverConfig{}) {
 			return nil, fmt.Errorf("IssuerKind %q must not set solverConfig", config.IssuerKind)
 		}
