@@ -72,10 +72,33 @@ func NewCertManagerConfigFromConfigMap(configMap *corev1.ConfigMap) (*CertManage
 	if v, ok := configMap.Data[issuerKindKey]; ok {
 		config.IssuerKind = strings.ToLower(v)
 		switch config.IssuerKind {
-		case "acme", "ca":
+		case "acme", "ca", "self-signing":
 		default:
 			return nil, fmt.Errorf("IssuerKind %q is not supported", config.IssuerKind)
 		}
+	}
+	return validate(config)
+}
+
+func validate(config *CertManagerConfig) (*CertManagerConfig, error) {
+	if config.IssuerRef.Kind == "" || config.IssuerRef.Name == "" {
+		return nil, fmt.Errorf("issuerRef kind and name must be set")
+	}
+	switch config.IssuerKind {
+	case "acme":
+		if config.SolverConfig.HTTP01 == nil && config.SolverConfig.DNS01 == nil {
+			return nil, fmt.Errorf("IssuerKind %q must set solverConfig", config.IssuerKind)
+		}
+	case "ca":
+		if *config.SolverConfig != (certmanagerv1alpha1.SolverConfig{}) {
+			return nil, fmt.Errorf("IssuerKind %q must not set solverConfig", config.IssuerKind)
+		}
+	case "self-signing":
+		if *config.SolverConfig != (certmanagerv1alpha1.SolverConfig{}) {
+			return nil, fmt.Errorf("IssuerKind %q must not set solverConfig", config.IssuerKind)
+		}
+	default:
+		return nil, fmt.Errorf("IssuerKind %q is not supported", config.IssuerKind)
 	}
 	return config, nil
 }

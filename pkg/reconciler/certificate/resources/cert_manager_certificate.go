@@ -17,6 +17,8 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
+
 	certmanagerv1alpha1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/kmeta"
@@ -51,6 +53,9 @@ func MakeCertManagerCertificate(cmConfig *config.CertManagerConfig, knCert *v1al
 		}
 	case "ca":
 		// ca does not need any specific config.
+	case "self-signing":
+		cert.Spec.IsCA = true
+		cert.Spec.CommonName = "my-selfsigned-root-ca"
 	}
 	return cert
 }
