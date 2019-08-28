@@ -53,7 +53,11 @@ func MakeCertManagerCertificate(cmConfig *config.CertManagerConfig, knCert *v1al
 		// ca does not need any specific config.
 	case "selfsigned":
 		cert.Spec.IsCA = true
-		cert.Spec.CommonName = "my-selfsigned-root-ca"
+		if len(knCert.Spec.DNSNames) != 0 {
+			cert.Spec.CommonName = knCert.Spec.DNSNames[0]
+		} else {
+			cert.Spec.CommonName = "serving.knative.dev"
+		}
 	}
 	return cert
 }

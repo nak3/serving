@@ -49,7 +49,6 @@ type CertManagerConfig struct {
 // NewCertManagerConfigFromConfigMap creates an CertManagerConfig from the supplied ConfigMap
 func NewCertManagerConfigFromConfigMap(configMap *corev1.ConfigMap) (*CertManagerConfig, error) {
 	// TODO(zhiminx): do we need to provide the default values here?
-	// TODO: validation check.
 
 	config := &CertManagerConfig{
 		SolverConfig: &certmanagerv1alpha1.SolverConfig{},
