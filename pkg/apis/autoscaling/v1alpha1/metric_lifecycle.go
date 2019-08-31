@@ -41,8 +41,8 @@ func (metric *MetricStatus) MarkNotReady(reason, message string) {
 }
 
 // MarkFailed marks the certificate as not ready.
-func (cs *CertificateStatus) MarkFailed(reason, message string) {
-	metricCondSet.Manage(metric).MarkFailed(MetricConditionReady, reason, message)
+func (metric *MetricStatus) MarkFalse(reason, message string) {
+	metricCondSet.Manage(metric).MarkFalse(MetricConditionReady, reason, message)
 }
 
 /*

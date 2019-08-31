@@ -30,6 +30,9 @@ import (
 
 	"go.uber.org/zap"
 	av1alpha1 "knative.dev/serving/pkg/apis/autoscaling/v1alpha1"
+
+	clientset "knative.dev/serving/pkg/client/clientset/versioned"
+	//autoscalingv1alpha1 "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
 )
 
 const (
@@ -111,17 +114,21 @@ type MetricCollector struct {
 
 	collections      map[types.NamespacedName]*collection
 	collectionsMutex sync.RWMutex
+
+	// TODO: ServingClientSet allows us to configure Serving objects
+	servingClientSet clientset.Interface
 }
 
 var _ Collector = (*MetricCollector)(nil)
 var _ MetricClient = (*MetricCollector)(nil)
 
 // NewMetricCollector creates a new metric collector.
-func NewMetricCollector(statsScraperFactory StatsScraperFactory, logger *zap.SugaredLogger) *MetricCollector {
+func NewMetricCollector(statsScraperFactory StatsScraperFactory, logger *zap.SugaredLogger, servingClientSet clientset.Interface) *MetricCollector {
 	collector := &MetricCollector{
 		logger:              logger,
 		collections:         make(map[types.NamespacedName]*collection),
 		statsScraperFactory: statsScraperFactory,
+		servingClientSet:    servingClientSet,
 	}
 
 	return collector
@@ -157,7 +164,7 @@ func (c *MetricCollector) CreateOrUpdate(metric *av1alpha1.Metric, r *rbase.Base
 		return nil
 	}
 
-	c.collections[key] = newCollection(metric, scraper, c.logger, r)
+	c.collections[key] = newCollection(metric, scraper, c.logger, c.servingClientSet)
 	return nil
 }
 
@@ -242,7 +249,7 @@ func (c *collection) getScraper() StatsScraper {
 
 // newCollection creates a new collection, which uses the given scraper to
 // collect stats every scrapeTickInterval.
-func newCollection(metric *av1alpha1.Metric, scraper StatsScraper, logger *zap.SugaredLogger, r *rbase.Base) *collection {
+func newCollection(metric *av1alpha1.Metric, scraper StatsScraper, logger *zap.SugaredLogger, servingClientSet clientset.Interface) *collection {
 	c := &collection{
 		metric:             metric,
 		concurrencyBuckets: aggregation.NewTimedFloat64Buckets(BucketSize),
@@ -270,7 +277,7 @@ func newCollection(metric *av1alpha1.Metric, scraper StatsScraper, logger *zap.S
 				if message != nil {
 					c.record(message.Stat)
 				}
-				c.statusRecord(metric, err, r)
+				c.statusRecord(metric, err, servingClientSet)
 			}
 		}
 	}()
@@ -296,7 +303,7 @@ func (c *collection) currentMetric() *av1alpha1.Metric {
 }
 
 // record adds a stat to the current collection.
-func (c *collection) statusRecord(metric *av1alpha1.Metric, err error, r *rbase.Base) {
+func (c *collection) statusRecord(metric *av1alpha1.Metric, err error, r clientset.Interface) {
 	if err == nil {
 		c.metric.Status.MarkReady()
 		metric.Status.MarkReady()
@@ -308,7 +315,7 @@ func (c *collection) statusRecord(metric *av1alpha1.Metric, err error, r *rbase.
 
 	existing := metric.DeepCopy()
 	existing.Status = existing.Status
-	r.ServingClientSet.AutoscalingV1alpha1().Metrics(existing.Namespace).UpdateStatus(existing)
+	r.servingClientSet.AutoscalingV1alpha1().Metrics(existing.Namespace).UpdateStatus(existing)
 
 	fmt.Printf("recorded !!!!!!!!!!!!!!!!! \n %+v \n", c.metric.Status) // output for debug
 }

@@ -17,6 +17,8 @@ limitations under the License.
 package metric
 
 import (
+	"fmt"
+
 	"context"
 
 	"github.com/pkg/errors"
@@ -61,9 +63,13 @@ func (r *reconciler) Reconcile(ctx context.Context, key string) error {
 		return errors.Wrapf(err, "failed to fetch metric %q", key)
 	}
 
+	//	metricInterface := r.ServingClientSet.AutoscalingV1alpha1().Metrics(namespace)
 	if err := r.collector.CreateOrUpdate(metric, r.Base); err != nil {
 		r.Recorder.Eventf(metric, corev1.EventTypeWarning, "UpdateFailed", "Failed to initiate or update %s/%s", namespace, name)
 		return errors.Wrapf(err, "failed to initiate or update scraping")
 	}
+	fmt.Printf("END???? !!!!!!!!!!!!!!!!! \n %+v \n", metric) // output for debug
+
+	r.ServingClientSet.AutoscalingV1alpha1().Metrics(namespace).UpdateStatus(metric)
 	return nil
 }

@@ -51,6 +51,8 @@ import (
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
+
+	servingclient "knative.dev/serving/pkg/client/injection/client"
 )
 
 const (
@@ -115,7 +117,7 @@ func main() {
 
 	endpointsInformer := endpointsinformer.Get(ctx)
 
-	collector := autoscaler.NewMetricCollector(statsScraperFactoryFunc(endpointsInformer.Lister()), logger)
+	collector := autoscaler.NewMetricCollector(statsScraperFactoryFunc(endpointsInformer.Lister()), logger, servingclient.Get(ctx))
 	customMetricsAdapter.WithCustomMetrics(autoscaler.NewMetricProvider(collector))
 
 	// Set up scalers.
