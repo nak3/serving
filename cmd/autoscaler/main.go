@@ -117,7 +117,7 @@ func main() {
 
 	endpointsInformer := endpointsinformer.Get(ctx)
 
-	collector := autoscaler.NewMetricCollector(statsScraperFactoryFunc(endpointsInformer.Lister()), logger, servingclient.Get(ctx))
+	collector := autoscaler.NewMetricCollector(statsScraperFactoryFunc(endpointsInformer.Lister()), logger, servingclient.Get(ctx).AutoscalingV1alpha1())
 	customMetricsAdapter.WithCustomMetrics(autoscaler.NewMetricProvider(collector))
 
 	// Set up scalers.

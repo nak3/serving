@@ -31,8 +31,8 @@ import (
 	"go.uber.org/zap"
 	av1alpha1 "knative.dev/serving/pkg/apis/autoscaling/v1alpha1"
 
-	clientset "knative.dev/serving/pkg/client/clientset/versioned"
-	//autoscalingv1alpha1 "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
+	// clientset "knative.dev/serving/pkg/client/clientset/versioned"
+	autoscalingv1alpha1 "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
 )
 
 const (
@@ -116,14 +116,14 @@ type MetricCollector struct {
 	collectionsMutex sync.RWMutex
 
 	// TODO: ServingClientSet allows us to configure Serving objects
-	servingClientSet clientset.Interface
+	servingClientSet autoscalingv1alpha1.AutoscalingV1alpha1Interface
 }
 
 var _ Collector = (*MetricCollector)(nil)
 var _ MetricClient = (*MetricCollector)(nil)
 
 // NewMetricCollector creates a new metric collector.
-func NewMetricCollector(statsScraperFactory StatsScraperFactory, logger *zap.SugaredLogger, servingClientSet clientset.Interface) *MetricCollector {
+func NewMetricCollector(statsScraperFactory StatsScraperFactory, logger *zap.SugaredLogger, servingClientSet autoscalingv1alpha1.AutoscalingV1alpha1Interface) *MetricCollector {
 	collector := &MetricCollector{
 		logger:              logger,
 		collections:         make(map[types.NamespacedName]*collection),
@@ -249,7 +249,7 @@ func (c *collection) getScraper() StatsScraper {
 
 // newCollection creates a new collection, which uses the given scraper to
 // collect stats every scrapeTickInterval.
-func newCollection(metric *av1alpha1.Metric, scraper StatsScraper, logger *zap.SugaredLogger, servingClientSet clientset.Interface) *collection {
+func newCollection(metric *av1alpha1.Metric, scraper StatsScraper, logger *zap.SugaredLogger, servingClientSet autoscalingv1alpha1.AutoscalingV1alpha1Interface) *collection {
 	c := &collection{
 		metric:             metric,
 		concurrencyBuckets: aggregation.NewTimedFloat64Buckets(BucketSize),
@@ -303,7 +303,7 @@ func (c *collection) currentMetric() *av1alpha1.Metric {
 }
 
 // record adds a stat to the current collection.
-func (c *collection) statusRecord(metric *av1alpha1.Metric, err error, r clientset.Interface) {
+func (c *collection) statusRecord(metric *av1alpha1.Metric, err error, r autoscalingv1alpha1.AutoscalingV1alpha1Interface) {
 	if err == nil {
 		c.metric.Status.MarkReady()
 		metric.Status.MarkReady()
@@ -315,7 +315,7 @@ func (c *collection) statusRecord(metric *av1alpha1.Metric, err error, r clients
 
 	existing := metric.DeepCopy()
 	existing.Status = existing.Status
-	r.servingClientSet.AutoscalingV1alpha1().Metrics(existing.Namespace).UpdateStatus(existing)
+	r.Metrics(existing.Namespace).UpdateStatus(existing)
 
 	fmt.Printf("recorded !!!!!!!!!!!!!!!!! \n %+v \n", c.metric.Status) // output for debug
 }
