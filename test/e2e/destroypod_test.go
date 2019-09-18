@@ -101,7 +101,7 @@ func TestDestroyPodInflight(t *testing.T) {
 		"TimeoutAppServesText",
 		test.ServingFlags.ResolvableDomain)
 	if err != nil {
-		t.Fatalf("The endpoint for Route %s at domain %s didn't serve the expected text \"%s\": %v", names.Route, domain, test.HelloWorldText, err)
+		t.Fatalf("The endpoint for Route %s at domain %s didn't serve the expected text \"%s\": %v", names.Route, domain, timeoutExpectedOutput, err)
 	}
 
 	client, err := pkgTest.NewSpoofingClient(clients.KubeClient, t.Logf, domain, test.ServingFlags.ResolvableDomain)
@@ -239,6 +239,16 @@ func TestDestroyPodWithRequests(t *testing.T) {
 		t.Fatalf("Number of pods is not 1 or an error: %v", err)
 	}
 
+	_, err = pkgTest.WaitForEndpointState(
+		clients.KubeClient,
+		t.Logf,
+		domain,
+		v1a1test.RetryingRouteInconsistency(pkgTest.MatchesAllOf(pkgTest.IsStatusOK)),
+		"TimeoutAppServesText",
+		test.ServingFlags.ResolvableDomain)
+	if err != nil {
+		t.Fatalf("Error probing domain %s: %v", domain, err)
+	}
 	// The request will sleep for more than 25 seconds.
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s?sleep=25001", domain), nil)
 	if err != nil {
