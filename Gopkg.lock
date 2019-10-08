@@ -633,6 +633,31 @@
   revision = "2ae31c8b6b30d2f4c8100c20d527b571e9c433bb"
 
 [[projects]]
+  digest = "1:e87d3f313113709e01fcf7a8b23cba603c0fce432557b93b970e06fda29ca445"
+  name = "github.com/openshift/api"
+  packages = ["route/v1"]
+  pruneopts = "NUT"
+  revision = "0d921e363e951d89f583292c60d013c318df64dc"
+  version = "v3.9.0"
+
+[[projects]]
+  digest = "1:68f4661e3f507a3aa3866a0fb9153bf6570e894f068b1c19186fddce08171eea"
+  name = "github.com/openshift/client-go"
+  packages = [
+    "route/clientset/versioned",
+    "route/clientset/versioned/scheme",
+    "route/clientset/versioned/typed/route/v1",
+    "route/informers/externalversions",
+    "route/informers/externalversions/internalinterfaces",
+    "route/informers/externalversions/route",
+    "route/informers/externalversions/route/v1",
+    "route/listers/route/v1",
+  ]
+  pruneopts = "NUT"
+  revision = "1fa528d3be060e4c7178eb69e76d37cf7e699e3c"
+  version = "v3.9.0"
+
+[[projects]]
   digest = "1:5ff10da739fc2c719e3a11454e5794aa226c918cb0286cd3842aa6ae077a82a1"
   name = "github.com/openzipkin/zipkin-go"
   packages = [
@@ -1827,6 +1852,10 @@
     "github.com/kubernetes-incubator/custom-metrics-apiserver/pkg/cmd",
     "github.com/kubernetes-incubator/custom-metrics-apiserver/pkg/provider",
     "github.com/mattbaird/jsonpatch",
+    "github.com/openshift/api/route/v1",
+    "github.com/openshift/client-go/route/clientset/versioned",
+    "github.com/openshift/client-go/route/informers/externalversions",
+    "github.com/openshift/client-go/route/listers/route/v1",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",

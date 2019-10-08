@@ -52,6 +52,8 @@ func NewController(
 		configurationLister: configurationInformer.Lister(),
 		revisionLister:      revisionInformer.Lister(),
 		routeLister:         routeInformer.Lister(),
+
+		shiftRouteLister: shiftRouteLister(),
 	}
 	impl := controller.NewImpl(c, c.Logger, ReconcilerName)
 

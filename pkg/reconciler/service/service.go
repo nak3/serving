@@ -41,6 +41,8 @@ import (
 	cfgreconciler "knative.dev/serving/pkg/reconciler/configuration"
 	"knative.dev/serving/pkg/reconciler/service/resources"
 	resourcenames "knative.dev/serving/pkg/reconciler/service/resources/names"
+
+	routelisters "github.com/openshift/client-go/route/listers/route/v1"
 )
 
 const (
@@ -57,6 +59,8 @@ type Reconciler struct {
 	configurationLister listers.ConfigurationLister
 	revisionLister      listers.RevisionLister
 	routeLister         listers.RouteLister
+
+	shiftRouteLister routelisters.RouteLister
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -191,6 +195,7 @@ func (c *Reconciler) reconcile(ctx context.Context, service *v1alpha1.Service) e
 	}
 
 	c.checkRoutesNotReady(config, logger, route, service)
+	c.checkOpenShiftRoutesNotReady(ctx, logger, service)
 	service.Status.ObservedGeneration = service.Generation
 
 	return nil
