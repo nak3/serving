@@ -31,6 +31,8 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/serving/pkg/apis/networking"
 	netv1alpha1 "knative.dev/serving/pkg/apis/networking/v1alpha1"
+
+	serviceentryinformer "knative.dev/pkg/client/istio/injection/informers/networking/v1alpha3/serviceentry"
 )
 
 const (
@@ -46,13 +48,15 @@ func NewController(
 	serviceInformer := serviceinformer.Get(ctx)
 	endpointsInformer := endpointsinformer.Get(ctx)
 	sksInformer := sksinformer.Get(ctx)
+	serviceEntryInformer := serviceentryinformer.Get(ctx)
 
 	c := &reconciler{
-		Base:              pkgreconciler.NewBase(ctx, controllerAgentName, cmw),
-		endpointsLister:   endpointsInformer.Lister(),
-		serviceLister:     serviceInformer.Lister(),
-		sksLister:         sksInformer.Lister(),
-		psInformerFactory: podscalable.Get(ctx),
+		Base:               pkgreconciler.NewBase(ctx, controllerAgentName, cmw),
+		endpointsLister:    endpointsInformer.Lister(),
+		serviceLister:      serviceInformer.Lister(),
+		sksLister:          sksInformer.Lister(),
+		serviceEntryLister: serviceEntryInformer.Lister(),
+		psInformerFactory:  podscalable.Get(ctx),
 	}
 	impl := controller.NewImpl(c, c.Logger, reconcilerName)
 

@@ -44,6 +44,8 @@ import (
 	rbase "knative.dev/serving/pkg/reconciler"
 	"knative.dev/serving/pkg/reconciler/serverlessservice/resources"
 	presources "knative.dev/serving/pkg/resources"
+
+	istiolisters "knative.dev/pkg/client/istio/listers/networking/v1alpha3"
 )
 
 const reconcilerName = "ServerlessServices"
@@ -56,6 +58,8 @@ type reconciler struct {
 	sksLister       listers.ServerlessServiceLister
 	serviceLister   corev1listers.ServiceLister
 	endpointsLister corev1listers.EndpointsLister
+
+	serviceEntryLister istiolisters.ServiceEntryLister
 
 	// Used to get PodScalables from object references.
 	psInformerFactory duck.InformerFactory
@@ -117,6 +121,7 @@ func (r *reconciler) reconcile(ctx context.Context, sks *netv1alpha1.ServerlessS
 		r.reconcilePrivateService, // First make sure our data source is setup.
 		r.reconcilePublicService,
 		r.reconcilePublicEndpoints,
+		r.reconcileServiceEntry, // TODO: comment why it is necessary
 	} {
 		if err := fn(ctx, sks); err != nil {
 			logger.Debugw(strconv.Itoa(i)+": reconcile failed", zap.Error(err))
@@ -176,6 +181,52 @@ func (r *reconciler) reconcilePublicService(ctx context.Context, sks *netv1alpha
 	}
 	sks.Status.ServiceName = sn
 	logger.Debug("Done reconciling public K8s service: ", sn)
+	return nil
+}
+
+// WIP
+func (r *reconciler) reconcileServiceEntry(ctx context.Context, sks *netv1alpha1.ServerlessService) error {
+	logger := logging.FromContext(ctx)
+	sn := sks.Name
+	eps, err := r.endpointsLister.Endpoints(sks.Namespace).Get(sn)
+	if err != nil {
+		return fmt.Errorf("failed to get private K8s Service endpoints: %w", err)
+	}
+	se, err := r.serviceEntryLister.ServiceEntries(sks.Namespace).Get(sn)
+	if apierrs.IsNotFound(err) {
+		if _, err = r.IstioClientSet.NetworkingV1alpha3().ServiceEntries(sks.Namespace).Create(resources.MakeServiceEntry(sks, eps)); err != nil {
+			return fmt.Errorf("failed to create ServiceEntry: %w", err)
+		}
+		logger.Info("Created ServiceEntry: ", sn)
+	} else if err != nil {
+		return fmt.Errorf("failed to get public K8s Endpoints: %w", err)
+	} else if !metav1.IsControlledBy(se, sks) {
+		// TOOD: sks.Status.MarkEndpointsNotOwned("ServiceEntry", se)
+		//sks.Status.MarkEndpointsNotOwned("ServiceEntry", se)
+		return fmt.Errorf("SKS: %s does not own ServiceEntry: %s", sks.Name, se.Name)
+	} else {
+		tmpl := resources.MakeServiceEntry(sks, eps)
+		want := se.DeepCopy()
+		want.Spec.Endpoints = tmpl.Spec.Endpoints
+		if !equality.Semantic.DeepEqual(want.Spec, se.Spec) {
+			logger.Info("ServiceEntry changed; reconciling: ", sn, cmp.Diff(want.Spec, se.Spec))
+			if _, err = r.IstioClientSet.NetworkingV1alpha3().ServiceEntries(sks.Namespace).Update(want); err != nil {
+				return fmt.Errorf("failed to update public K8s Service: %w", err)
+			}
+		}
+		/*
+			wantSubsets := resources.FilterSubsetPorts(sks, srcEps.Subsets)
+			if !equality.Semantic.DeepEqual(wantSubsets, eps.Subsets) {
+				want := eps.DeepCopy()
+				want.Subsets = wantSubsets
+				logger.Info("Public K8s Endpoints changed; reconciling: ", sn)
+				if _, err = r.KubeClientSet.CoreV1().Endpoints(sks.Namespace).Update(want); err != nil {
+					return fmt.Errorf("failed to update public K8s Endpoints: %w", err)
+				}
+			}
+		*/
+	}
+	logger.Info("###################### ok 4")
 	return nil
 }
 
