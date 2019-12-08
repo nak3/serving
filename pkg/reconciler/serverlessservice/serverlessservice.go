@@ -201,7 +201,7 @@ func (r *reconciler) reconcileServiceEntry(ctx context.Context, sks *netv1alpha1
 	} else if err != nil {
 		return fmt.Errorf("failed to get public K8s Endpoints: %w", err)
 	} else if !metav1.IsControlledBy(se, sks) {
-		// TOOD: sks.Status.MarkEndpointsNotOwned("ServiceEntry", se)
+		// TOOD:
 		//sks.Status.MarkEndpointsNotOwned("ServiceEntry", se)
 		return fmt.Errorf("SKS: %s does not own ServiceEntry: %s", sks.Name, se.Name)
 	} else {
@@ -214,19 +214,7 @@ func (r *reconciler) reconcileServiceEntry(ctx context.Context, sks *netv1alpha1
 				return fmt.Errorf("failed to update public K8s Service: %w", err)
 			}
 		}
-		/*
-			wantSubsets := resources.FilterSubsetPorts(sks, srcEps.Subsets)
-			if !equality.Semantic.DeepEqual(wantSubsets, eps.Subsets) {
-				want := eps.DeepCopy()
-				want.Subsets = wantSubsets
-				logger.Info("Public K8s Endpoints changed; reconciling: ", sn)
-				if _, err = r.KubeClientSet.CoreV1().Endpoints(sks.Namespace).Update(want); err != nil {
-					return fmt.Errorf("failed to update public K8s Endpoints: %w", err)
-				}
-			}
-		*/
 	}
-	logger.Info("###################### ok 4")
 	return nil
 }
 
