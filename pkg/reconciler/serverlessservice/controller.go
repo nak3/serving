@@ -92,5 +92,10 @@ func NewController(
 		Handler: controller.HandleAll(grCb),
 	})
 
+	// Watch all the serviceentries that we have attached our label to.
+	serviceEntryInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.LabelExistsFilterFunc(networking.SKSLabelKey),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
 	return impl
 }
