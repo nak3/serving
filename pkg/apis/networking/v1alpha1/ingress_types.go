@@ -278,11 +278,6 @@ type HTTPRetry struct {
 type IngressStatus struct {
 	duckv1.Status `json:",inline"`
 
-	// LoadBalancer contains the current status of the load-balancer.
-	// This is to be superseded by the combination of `PublicLoadBalancer` and `PrivateLoadBalancer`
-	// +optional
-	LoadBalancer *LoadBalancerStatus `json:"loadBalancer,omitempty"`
-
 	// PublicLoadBalancer contains the current status of the load-balancer.
 	// +optional
 	PublicLoadBalancer *LoadBalancerStatus `json:"publicLoadBalancer,omitempty"`

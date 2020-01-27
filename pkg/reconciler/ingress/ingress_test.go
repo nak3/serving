@@ -200,11 +200,6 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: ingressWithStatus("no-virtualservice-yet", 1234,
 				v1alpha1.IngressStatus{
-					LoadBalancer: &v1alpha1.LoadBalancerStatus{
-						Ingress: []v1alpha1.LoadBalancerIngressStatus{
-							{DomainInternal: pkgnet.GetServiceHostname("test-ingressgateway", "istio-system")},
-						},
-					},
 					PublicLoadBalancer: &v1alpha1.LoadBalancerStatus{
 						Ingress: []v1alpha1.LoadBalancerIngressStatus{
 							{DomainInternal: pkgnet.GetServiceHostname("test-ingressgateway", "istio-system")},
@@ -361,11 +356,6 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: ingressWithStatus("reconcile-virtualservice", 1234,
 				v1alpha1.IngressStatus{
-					LoadBalancer: &v1alpha1.LoadBalancerStatus{
-						Ingress: []v1alpha1.LoadBalancerIngressStatus{
-							{DomainInternal: pkgnet.GetServiceHostname("test-ingressgateway", "istio-system")},
-						},
-					},
 					PublicLoadBalancer: &v1alpha1.LoadBalancerStatus{
 						Ingress: []v1alpha1.LoadBalancerIngressStatus{
 							{DomainInternal: pkgnet.GetServiceHostname("test-ingressgateway", "istio-system")},
@@ -471,11 +461,6 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: addAnnotations(ingressWithStatus("reconcile-virtualservice", 1234,
 				v1alpha1.IngressStatus{
-					LoadBalancer: &v1alpha1.LoadBalancerStatus{
-						Ingress: []v1alpha1.LoadBalancerIngressStatus{
-							{DomainInternal: pkgnet.GetServiceHostname("test-ingressgateway", "istio-system")},
-						},
-					},
 					PublicLoadBalancer: &v1alpha1.LoadBalancerStatus{
 						Ingress: []v1alpha1.LoadBalancerIngressStatus{
 							{DomainInternal: pkgnet.GetServiceHostname("test-ingressgateway", "istio-system")},
@@ -558,11 +543,6 @@ func TestReconcile_EnableAutoTLS(t *testing.T) {
 			Object: ingressWithTLSAndStatus("reconciling-ingress", 1234,
 				ingressTLS,
 				v1alpha1.IngressStatus{
-					LoadBalancer: &v1alpha1.LoadBalancerStatus{
-						Ingress: []v1alpha1.LoadBalancerIngressStatus{
-							{DomainInternal: pkgnet.GetServiceHostname("istio-ingressgateway", "istio-system")},
-						},
-					},
 					PublicLoadBalancer: &v1alpha1.LoadBalancerStatus{
 						Ingress: []v1alpha1.LoadBalancerIngressStatus{
 							{DomainInternal: pkgnet.GetServiceHostname("istio-ingressgateway", "istio-system")},
@@ -689,11 +669,6 @@ func TestReconcile_EnableAutoTLS(t *testing.T) {
 			Object: ingressWithFinalizersAndStatus("reconciling-ingress", 1234,
 				[]string{ingressFinalizer},
 				v1alpha1.IngressStatus{
-					LoadBalancer: &v1alpha1.LoadBalancerStatus{
-						Ingress: []v1alpha1.LoadBalancerIngressStatus{
-							{DomainInternal: pkgnet.GetServiceHostname("istio-ingressgateway", "istio-system")},
-						},
-					},
 					PublicLoadBalancer: &v1alpha1.LoadBalancerStatus{
 						Ingress: []v1alpha1.LoadBalancerIngressStatus{
 							{DomainInternal: pkgnet.GetServiceHostname("istio-ingressgateway", "istio-system")},
@@ -765,11 +740,6 @@ func TestReconcile_EnableAutoTLS(t *testing.T) {
 			Object: ingressWithTLSAndStatus("reconciling-ingress", 1234,
 				ingressTLSWithSecretNamespace("knative-serving"),
 				v1alpha1.IngressStatus{
-					LoadBalancer: &v1alpha1.LoadBalancerStatus{
-						Ingress: []v1alpha1.LoadBalancerIngressStatus{
-							{DomainInternal: pkgnet.GetServiceHostname("istio-ingressgateway", "istio-system")},
-						},
-					},
 					PublicLoadBalancer: &v1alpha1.LoadBalancerStatus{
 						Ingress: []v1alpha1.LoadBalancerIngressStatus{
 							{DomainInternal: pkgnet.GetServiceHostname("istio-ingressgateway", "istio-system")},
@@ -867,11 +837,6 @@ func TestReconcile_EnableAutoTLS(t *testing.T) {
 			Object: ingressWithTLSAndStatus("reconciling-ingress", 1234,
 				ingressTLSWithSecretNamespace("knative-serving"),
 				v1alpha1.IngressStatus{
-					LoadBalancer: &v1alpha1.LoadBalancerStatus{
-						Ingress: []v1alpha1.LoadBalancerIngressStatus{
-							{DomainInternal: pkgnet.GetServiceHostname("istio-ingressgateway", "istio-system")},
-						},
-					},
 					PublicLoadBalancer: &v1alpha1.LoadBalancerStatus{
 						Ingress: []v1alpha1.LoadBalancerIngressStatus{
 							{DomainInternal: pkgnet.GetServiceHostname("istio-ingressgateway", "istio-system")},
@@ -925,9 +890,6 @@ func TestReconcile_EnableAutoTLS(t *testing.T) {
 			Object: ingressWithTLSAndStatusClusterLocal("reconciling-ingress", 1234,
 				ingressTLS,
 				v1alpha1.IngressStatus{
-					LoadBalancer: &v1alpha1.LoadBalancerStatus{
-						Ingress: []v1alpha1.LoadBalancerIngressStatus{{MeshOnly: true}},
-					},
 					PublicLoadBalancer: &v1alpha1.LoadBalancerStatus{
 						Ingress: []v1alpha1.LoadBalancerIngressStatus{
 							{DomainInternal: pkgnet.GetServiceHostname("istio-ingressgateway", "istio-system")},
@@ -1237,7 +1199,7 @@ func TestGlobalResyncOnUpdateGatewayConfigMap(t *testing.T) {
 		ci := obj.(*v1alpha1.Ingress)
 		t.Logf("ingress updated: %q", ci.Name)
 
-		gateways := ci.Status.LoadBalancer.Ingress
+		gateways := ci.Status.PublicLoadBalancer.Ingress
 		if len(gateways) != 1 {
 			t.Logf("Unexpected gateways: %v", gateways)
 			return HookIncomplete
@@ -1271,11 +1233,6 @@ func TestGlobalResyncOnUpdateGatewayConfigMap(t *testing.T) {
 
 	ingress := ingressWithStatus("config-update", 1234,
 		v1alpha1.IngressStatus{
-			LoadBalancer: &v1alpha1.LoadBalancerStatus{
-				Ingress: []v1alpha1.LoadBalancerIngressStatus{
-					{DomainInternal: ""},
-				},
-			},
 			Status: duckv1.Status{
 				Conditions: duckv1.Conditions{{
 					Type:   v1alpha1.IngressConditionLoadBalancerReady,
@@ -1362,11 +1319,6 @@ func TestGlobalResyncOnUpdateNetwork(t *testing.T) {
 	ingress := ingressWithTLSAndStatus("reconciling-ingress", 1234,
 		ingressTLS,
 		v1alpha1.IngressStatus{
-			LoadBalancer: &v1alpha1.LoadBalancerStatus{
-				Ingress: []v1alpha1.LoadBalancerIngressStatus{
-					{DomainInternal: originDomainInternal},
-				},
-			},
 			Status: duckv1.Status{
 				Conditions: duckv1.Conditions{{
 					Type:   v1alpha1.IngressConditionLoadBalancerReady,
