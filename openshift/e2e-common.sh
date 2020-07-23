@@ -179,6 +179,9 @@ function prepare_knative_serving_tests {
   # Adding scc for anyuid to test TestShouldRunAsUserContainerDefault.
   oc adm policy add-scc-to-user anyuid -z default -n serving-tests
 
+  # Enable HTTP/2 on the entire cluster.
+  oc annotate ingresses.config/cluster ingress.operator.openshift.io/default-enable-http2=true
+
   export SYSTEM_NAMESPACE="$SERVING_NAMESPACE"
   export GATEWAY_OVERRIDE=kourier
   export GATEWAY_NAMESPACE_OVERRIDE="$SERVING_INGRESS_NAMESPACE"
