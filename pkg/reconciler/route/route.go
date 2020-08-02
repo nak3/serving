@@ -142,15 +142,21 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1.Route) pkgreconcil
 		return err
 	}
 
+	realmName := r.Annotations[serving.VisibilityLabelKey]
+	if realmName == "" {
+		realmName = "default"
+	}
 	// TODO:
-	labelSelector := kubelabels.SelectorFromSet(kubelabels.Set{
-		networking.WildcardCertDomainLabelKey: "",
-	})
-	realms, err := c.realmLister.List(labelSelector)
+	//realms, err := c.realmLister.List(labels.Everything())
+	realm, err := c.realmLister.Get(realmName)
 	if err != nil {
 		return err
 	}
-	logger.Info("### debug: ", realms)
+
+	logger.Info("### debug: ", realm)
+
+	domainEx := realm.Spec.External
+	domainIn := realm.Spec.External
 
 	// Reconcile ingress and its children resources.
 	ingress, err := c.reconcileIngressResources(ctx, r, traffic, tls, ingressClassForRoute(ctx, r), acmeChallenges...)
