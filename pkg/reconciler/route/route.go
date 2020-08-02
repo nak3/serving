@@ -66,6 +66,8 @@ type Reconciler struct {
 	revisionLister      listers.RevisionLister
 	serviceLister       corev1listers.ServiceLister
 	ingressLister       networkinglisters.IngressLister
+	realmLister         networkinglisters.RealmLister
+	domainLister        networkinglisters.DomainLister
 	certificateLister   networkinglisters.CertificateLister
 	tracker             tracker.Interface
 
@@ -139,6 +141,16 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1.Route) pkgreconcil
 	if err != nil {
 		return err
 	}
+
+	// TODO:
+	labelSelector := kubelabels.SelectorFromSet(kubelabels.Set{
+		networking.WildcardCertDomainLabelKey: "",
+	})
+	realms, err := c.realmLister.List(labelSelector)
+	if err != nil {
+		return err
+	}
+	logger.Info("### debug: ", realms)
 
 	// Reconcile ingress and its children resources.
 	ingress, err := c.reconcileIngressResources(ctx, r, traffic, tls, ingressClassForRoute(ctx, r), acmeChallenges...)

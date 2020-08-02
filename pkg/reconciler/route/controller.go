@@ -21,7 +21,9 @@ import (
 
 	netclient "knative.dev/networking/pkg/client/injection/client"
 	certificateinformer "knative.dev/networking/pkg/client/injection/informers/networking/v1alpha1/certificate"
+	domaininformer "knative.dev/networking/pkg/client/injection/informers/networking/v1alpha1/domain"
 	ingressinformer "knative.dev/networking/pkg/client/injection/informers/networking/v1alpha1/ingress"
+	realminformer "knative.dev/networking/pkg/client/injection/informers/networking/v1alpha1/realm"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	servingclient "knative.dev/serving/pkg/client/injection/client"
@@ -68,6 +70,9 @@ func newControllerWithClock(
 	configInformer := configurationinformer.Get(ctx)
 	revisionInformer := revisioninformer.Get(ctx)
 	ingressInformer := ingressinformer.Get(ctx)
+	realmInformer := realminformer.Get(ctx)
+	domainInformer := domaininformer.Get(ctx)
+
 	certificateInformer := certificateinformer.Get(ctx)
 
 	c := &Reconciler{
@@ -78,6 +83,8 @@ func newControllerWithClock(
 		revisionLister:      revisionInformer.Lister(),
 		serviceLister:       serviceInformer.Lister(),
 		ingressLister:       ingressInformer.Lister(),
+		realmLister:         realmInformer.Lister(),
+		domainLister:        domainInformer.Lister(),
 		certificateLister:   certificateInformer.Lister(),
 		clock:               clock,
 	}
