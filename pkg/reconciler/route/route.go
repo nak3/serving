@@ -40,6 +40,7 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 	cfgmap "knative.dev/serving/pkg/apis/config"
+	"knative.dev/serving/pkg/apis/serving"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
 	clientset "knative.dev/serving/pkg/client/clientset/versioned"
 	routereconciler "knative.dev/serving/pkg/client/injection/reconciler/serving/v1/route"
@@ -150,13 +151,16 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1.Route) pkgreconcil
 	//realms, err := c.realmLister.List(labels.Everything())
 	realm, err := c.realmLister.Get(realmName)
 	if err != nil {
-		return err
+		//		return err
 	}
 
 	logger.Info("### debug: ", realm)
 
 	domainEx := realm.Spec.External
-	domainIn := realm.Spec.External
+	domainIn := realm.Spec.Cluster
+
+	logger.Info("### domainEx: ", domainEx)
+	logger.Info("### domainIn: ", domainIn)
 
 	// Reconcile ingress and its children resources.
 	ingress, err := c.reconcileIngressResources(ctx, r, traffic, tls, ingressClassForRoute(ctx, r), acmeChallenges...)
