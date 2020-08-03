@@ -143,25 +143,6 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1.Route) pkgreconcil
 		return err
 	}
 
-	realmName := r.Annotations[serving.VisibilityLabelKey]
-	if realmName == "" {
-		realmName = "default"
-	}
-	// TODO:
-	//realms, err := c.realmLister.List(labels.Everything())
-	realm, err := c.realmLister.Get(realmName)
-	if err != nil {
-		return err
-	}
-
-	logger.Info("### debug: ", realm)
-
-	domainEx := realm.Spec.External
-	domainIn := realm.Spec.Cluster
-
-	logger.Info("### domainEx: ", domainEx)
-	logger.Info("### domainIn: ", domainIn)
-
 	// Reconcile ingress and its children resources.
 	ingress, err := c.reconcileIngressResources(ctx, r, traffic, tls, ingressClassForRoute(ctx, r), acmeChallenges...)
 
@@ -186,6 +167,31 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1.Route) pkgreconcil
 
 func (c *Reconciler) reconcileIngressResources(ctx context.Context, r *v1.Route, tc *traffic.Config, tls []netv1alpha1.IngressTLS,
 	ingressClass string, acmeChallenges ...netv1alpha1.HTTP01Challenge) (*netv1alpha1.Ingress, error) {
+
+	realmName := r.Annotations[serving.VisibilityLabelKey]
+	if realmName == "" {
+		realmName = "default"
+	}
+
+	// TODO:
+	//realms, err := c.realmLister.List(labels.Everything())
+	realm, err := c.realmLister.Get(realmName)
+	if err != nil {
+		return nil, err
+	}
+
+	//	logger.Info("### debug: ", realm)
+
+	//	domainEx := realm.Spec.External
+	//	domainIn := realm.Spec.Cluster
+
+	//	logger.Info("### domainEx: ", domainEx)
+	//	logger.Info("### domainIn: ", domainIn)
+
+	domain, _ := c.domainLister.Get(realm.Spec.External)
+	if err != nil {
+		return nil, err
+	}
 
 	desired, err := resources.MakeIngress(ctx, r, tc, tls, ingressClass, acmeChallenges...)
 	if err != nil {
@@ -368,7 +374,32 @@ func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, 
 	mainRouteMeta := route.ObjectMeta.DeepCopy()
 	labels.SetVisibility(mainRouteMeta, isClusterLocal)
 
-	host, err := domains.DomainNameFromTemplate(ctx, *mainRouteMeta, route.Name)
+	realmName := route.Annotations[serving.VisibilityLabelKey]
+	if realmName == "" {
+		realmName = "default"
+	}
+
+	// TODO:
+	//realms, err := c.realmLister.List(labels.Everything())
+	realm, err := c.realmLister.Get(realmName)
+	if err != nil {
+		return err
+	}
+
+	//	logger.Info("### debug: ", realm)
+
+	//	domainEx := realm.Spec.External
+	//	domainIn := realm.Spec.Cluster
+
+	//	logger.Info("### domainEx: ", domainEx)
+	//	logger.Info("### domainIn: ", domainIn)
+
+	domain, _ := c.domainLister.Get(realm.Spec.External)
+	if err != nil {
+		return err
+	}
+
+	host, err := domains.DomainNameTODO(ctx, *mainRouteMeta, route.Name, domain.Spec.Suffix)
 	if err != nil {
 		return err
 	}

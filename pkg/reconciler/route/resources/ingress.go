@@ -177,7 +177,7 @@ func routeDomain(ctx context.Context, targetName string, r *servingv1.Route, vis
 	isClusterLocal := visibility == netv1alpha1.IngressVisibilityClusterLocal
 	labels.SetVisibility(meta, isClusterLocal)
 
-	return domains.DomainNameFromTemplate(ctx, *meta, hostname)
+	return domains.DomainNameTODO(ctx, *meta, hostname)
 }
 
 func makeACMEIngressPaths(challenges map[string]netv1alpha1.HTTP01Challenge, domains []string) []netv1alpha1.HTTPIngressPath {
