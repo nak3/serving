@@ -151,7 +151,7 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1.Route) pkgreconcil
 	//realms, err := c.realmLister.List(labels.Everything())
 	realm, err := c.realmLister.Get(realmName)
 	if err != nil {
-		//		return err
+		return err
 	}
 
 	logger.Info("### debug: ", realm)
