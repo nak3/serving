@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	network "knative.dev/networking/pkg"
 	netv1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	networkinglisters "knative.dev/networking/pkg/client/listers/networking/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgnet "knative.dev/pkg/network"
 	"knative.dev/serving/pkg/apis/serving"
@@ -37,8 +38,19 @@ import (
 // HTTPScheme is the string representation of http.
 const HTTPScheme string = "http"
 
+// Resolver resolves the visibility of traffic targets, based on both the Route and placeholder Services labels.
+type Resolver struct {
+	realmLister  networkinglisters.RealmLister
+	domainLister networkinglisters.DomainLister
+}
+
+// NewResolver returns a new Resolver.
+func NewResolver(rl networkinglisters.RealmLister, dl networkinglisters.DomainLister) *Resolver {
+	return &Resolver{realmLister: rl, domainLister: dl}
+}
+
 // GetAllDomainsAndTags returns all of the domains and tags(including subdomains) associated with a Route
-func GetAllDomainsAndTags(ctx context.Context, r *v1.Route, names []string, visibility map[string]netv1alpha1.IngressVisibility) (map[string]string, error) {
+func (b *Resolver) GetAllDomainsAndTags(ctx context.Context, r *v1.Route, names []string, visibility map[string]netv1alpha1.IngressVisibility) (map[string]string, error) {
 	domainTagMap := make(map[string]string)
 
 	for _, name := range names {
@@ -51,7 +63,7 @@ func GetAllDomainsAndTags(ctx context.Context, r *v1.Route, names []string, visi
 
 		labels.SetVisibility(meta, visibility[name] == netv1alpha1.IngressVisibilityClusterLocal)
 
-		subDomain, err := DomainNameFromTemplate(ctx, *meta, hostname)
+		subDomain, err := b.DomainNameFromTemplate(ctx, *meta, hostname)
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +74,7 @@ func GetAllDomainsAndTags(ctx context.Context, r *v1.Route, names []string, visi
 
 // DomainNameFromTemplate generates domain name base on the template specified in the `config-network` ConfigMap.
 // name is the "subdomain" which will be referred as the "name" in the template
-func DomainNameFromTemplate(ctx context.Context, r metav1.ObjectMeta, name string) (string, error) {
+func (b *Resolver) DomainNameFromTemplate(ctx context.Context, r metav1.ObjectMeta, name string) (string, error) {
 	domainConfig := config.FromContext(ctx).Domain
 	rLabels := r.Labels
 	domain := domainConfig.LookupDomainForLabels(rLabels)
@@ -84,7 +96,24 @@ func DomainNameFromTemplate(ctx context.Context, r metav1.ObjectMeta, name strin
 	var templ *template.Template
 	// If the route is "cluster local" then don't use the user-defined
 	// domain template, use the default one
-	if rLabels[serving.VisibilityLabelKey] == serving.VisibilityClusterLocal {
+	if visibility := rLabels[serving.VisibilityLabelKey]; visibility != "" {
+		// TODO:
+		//realms, err := c.realmLister.List(labels.Everything())
+
+		/*
+		   realm, err := c.realmLister.Get(realmName)
+		   if err != nil {
+		           return err
+		   }
+		*/
+
+		//domain, _ := c.domainLister.Get(realm.Spec.External)
+		domain, err := b.domainLister.Get(visibility)
+		if err != nil {
+			return "", err
+		}
+		data.Domain = domain.Spec.Suffix
+	} else if rLabels[serving.VisibilityLabelKey] == serving.VisibilityClusterLocal {
 		templ = template.Must(template.New("domain-template").Parse(
 			network.DefaultDomainTemplate))
 	} else {
@@ -97,8 +126,27 @@ func DomainNameFromTemplate(ctx context.Context, r metav1.ObjectMeta, name strin
 	return buf.String(), nil
 }
 
+func LocalDomainNameFromTemplate(ctx context.Context, name string) (string, error) {
+	data := network.DomainTemplateValues{
+		Name:      name,
+		Namespace: "placeholder",
+		Domain:    "placeholder.example.com",
+	}
+
+	buf := bytes.Buffer{}
+
+	var templ *template.Template
+	templ = template.Must(template.New("domain-template").Parse(
+		network.DefaultDomainTemplate))
+
+	if err := templ.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("error executing the DomainTemplate: %w", err)
+	}
+	return buf.String(), nil
+}
+
 // TODO
-func DomainNameTODO(ctx context.Context, r metav1.ObjectMeta, name string, domain *netv1alpha1.Domain) (string, error) {
+func DomainNameFromRealm(ctx context.Context, r metav1.ObjectMeta, name string, domain *netv1alpha1.Domain) (string, error) {
 	// domainConfig := config.FromContext(ctx).Domain
 	rLabels := r.Labels
 	//domain := domainConfig.LookupDomainForLabels(rLabels)
@@ -114,9 +162,6 @@ func DomainNameTODO(ctx context.Context, r metav1.ObjectMeta, name string, domai
 		Annotations: annotations,
 		Labels:      rLabels,
 	}
-
-	fmt.Printf("######### suffix: %+v\n", domain.Spec.Suffix)
-	fmt.Printf("######### domain: %+v\n", domain.Spec.Suffix)
 
 	networkConfig := config.FromContext(ctx).Network
 	buf := bytes.Buffer{}

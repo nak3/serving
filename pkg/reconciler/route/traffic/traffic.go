@@ -24,6 +24,7 @@ import (
 
 	net "knative.dev/networking/pkg/apis/networking"
 	netv1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	networkinglisters "knative.dev/networking/pkg/client/listers/networking/v1alpha1"
 	"knative.dev/pkg/ptr"
 	"knative.dev/serving/pkg/apis/serving"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -90,7 +91,7 @@ func BuildTrafficConfiguration(configLister listers.ConfigurationLister, revList
 }
 
 // GetRevisionTrafficTargets returns a list of TrafficTarget flattened to the RevisionName, and having ConfigurationName cleared out.
-func (t *Config) GetRevisionTrafficTargets(ctx context.Context, r *v1.Route) ([]v1.TrafficTarget, error) {
+func (t *Config) GetRevisionTrafficTargets(ctx context.Context, r *v1.Route, rl networkinglisters.RealmLister, dl networkinglisters.DomainLister) ([]v1.TrafficTarget, error) {
 	results := make([]v1.TrafficTarget, len(t.revisionTargets))
 	for i, tt := range t.revisionTargets {
 		var pp *int64
@@ -117,7 +118,7 @@ func (t *Config) GetRevisionTrafficTargets(ctx context.Context, r *v1.Route) ([]
 			labels.SetVisibility(meta, t.Visibility[tt.Tag] == netv1alpha1.IngressVisibilityClusterLocal)
 
 			// http is currently the only supported scheme
-			fullDomain, err := domains.DomainNameFromTemplate(ctx, *meta, hostname)
+			fullDomain, err := domains.NewResolver(rl, dl).DomainNameFromTemplate(ctx, *meta, hostname)
 			if err != nil {
 				return nil, err
 			}

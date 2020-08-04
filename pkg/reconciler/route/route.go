@@ -218,7 +218,7 @@ func (c *Reconciler) tls(ctx context.Context, host string, r *v1.Route, traffic 
 		r.Status.MarkTLSNotEnabled(v1.AutoTLSNotEnabledMessage)
 		return tls, nil, nil
 	}
-	domainToTagMap, err := domains.GetAllDomainsAndTags(ctx, r, getTrafficNames(traffic.Targets), traffic.Visibility)
+	domainToTagMap, err := domains.NewResolver(c.realmLister, c.domainLister).GetAllDomainsAndTags(ctx, r, getTrafficNames(traffic.Targets), traffic.Visibility)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -364,7 +364,7 @@ func (c *Reconciler) configureTraffic(ctx context.Context, r *v1.Route) (*traffi
 	logger.Info("All referred targets are routable, marking AllTrafficAssigned with traffic information.")
 
 	// Domain should already be present
-	r.Status.Traffic, err = t.GetRevisionTrafficTargets(ctx, r)
+	r.Status.Traffic, err = t.GetRevisionTrafficTargets(ctx, r, c.realmLister, c.domainLister)
 	if err != nil {
 		return nil, err
 	}
@@ -413,7 +413,7 @@ func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, 
 	fmt.Printf("0. domain.spec ######### %#v\n", domain.Spec)               // output for debug
 	fmt.Printf("0. domain.spec.suffix ######### %#v\n", domain.Spec.Suffix) // output for debug
 
-	host, err := domains.DomainNameTODO(ctx, *mainRouteMeta, route.Name, domain)
+	host, err := domains.DomainNameFromRealm(ctx, *mainRouteMeta, route.Name, domain)
 	if err != nil {
 		return err
 	}
