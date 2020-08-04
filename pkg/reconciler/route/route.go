@@ -17,6 +17,8 @@ limitations under the License.
 package route
 
 import (
+	"fmt"
+
 	"context"
 	"sort"
 	"strings"
@@ -175,15 +177,20 @@ func (c *Reconciler) reconcileIngressResources(ctx context.Context, r *v1.Route,
 
 	// TODO:
 	//realms, err := c.realmLister.List(labels.Everything())
-	realm, err := c.realmLister.Get(realmName)
+	/*
+		realm, err := c.realmLister.Get(realmName)
+		if err != nil {
+			return nil, err
+		}
+
+		domainEx, _ := c.domainLister.Get(realm.Spec.External)
+	*/
+	domainEx, err := c.domainLister.Get("istio-external")
 	if err != nil {
 		return nil, err
 	}
 
-	domainEx, _ := c.domainLister.Get(realm.Spec.External)
-	if err != nil {
-		return nil, err
-	}
+	fmt.Printf("######## %+v\n", domainEx) // output for debug
 	/*
 		domainIn, _ := c.domainLister.Get(realm.Spec.Internal)
 		if err != nil {
@@ -380,10 +387,13 @@ func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, 
 
 	// TODO:
 	//realms, err := c.realmLister.List(labels.Everything())
-	realm, err := c.realmLister.Get(realmName)
-	if err != nil {
-		return err
-	}
+
+	/*
+		realm, err := c.realmLister.Get(realmName)
+		if err != nil {
+			return err
+		}
+	*/
 
 	//	logger.Info("### debug: ", realm)
 
@@ -393,10 +403,15 @@ func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, 
 	//	logger.Info("### domainEx: ", domainEx)
 	//	logger.Info("### domainIn: ", domainIn)
 
-	domain, _ := c.domainLister.Get(realm.Spec.External)
+	//domain, _ := c.domainLister.Get(realm.Spec.External)
+	domain, err := c.domainLister.Get("istio-external")
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("0. domain ######### %#v\n", domain)                         // output for debug
+	fmt.Printf("0. domain.spec ######### %#v\n", domain.Spec)               // output for debug
+	fmt.Printf("0. domain.spec.suffix ######### %#v\n", domain.Spec.Suffix) // output for debug
 
 	host, err := domains.DomainNameTODO(ctx, *mainRouteMeta, route.Name, domain)
 	if err != nil {

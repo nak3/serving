@@ -115,6 +115,9 @@ func DomainNameTODO(ctx context.Context, r metav1.ObjectMeta, name string, domai
 		Labels:      rLabels,
 	}
 
+	fmt.Printf("######### suffix: %+v\n", domain.Spec.Suffix)
+	fmt.Printf("######### domain: %+v\n", domain.Spec.Suffix)
+
 	networkConfig := config.FromContext(ctx).Network
 	buf := bytes.Buffer{}
 
