@@ -180,20 +180,19 @@ func (c *Reconciler) reconcileIngressResources(ctx context.Context, r *v1.Route,
 		return nil, err
 	}
 
-	//	logger.Info("### debug: ", realm)
-
-	//	domainEx := realm.Spec.External
-	//	domainIn := realm.Spec.Cluster
-
-	//	logger.Info("### domainEx: ", domainEx)
-	//	logger.Info("### domainIn: ", domainIn)
-
-	domain, _ := c.domainLister.Get(realm.Spec.External)
+	domainEx, _ := c.domainLister.Get(realm.Spec.External)
 	if err != nil {
 		return nil, err
 	}
+	/*
+		domainIn, _ := c.domainLister.Get(realm.Spec.Internal)
+		if err != nil {
+			return nil, err
+		}
+	*/
+	domainMap := map[bool]*netv1alpha1.Domain{true: domainEx, false: domainEx}
 
-	desired, err := resources.MakeIngress(ctx, r, tc, tls, ingressClass, acmeChallenges...)
+	desired, err := resources.MakeIngress(ctx, r, tc, tls, ingressClass, domainMap, acmeChallenges...)
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +398,7 @@ func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, 
 		return err
 	}
 
-	host, err := domains.DomainNameTODO(ctx, *mainRouteMeta, route.Name, domain.Spec.Suffix)
+	host, err := domains.DomainNameTODO(ctx, *mainRouteMeta, route.Name, domain)
 	if err != nil {
 		return err
 	}

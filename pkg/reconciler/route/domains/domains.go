@@ -98,7 +98,7 @@ func DomainNameFromTemplate(ctx context.Context, r metav1.ObjectMeta, name strin
 }
 
 // TODO
-func DomainNameTODO(ctx context.Context, r metav1.ObjectMeta, name string, domain string) (string, error) {
+func DomainNameTODO(ctx context.Context, r metav1.ObjectMeta, name string, domain *netv1alpha1.Domain) (string, error) {
 	// domainConfig := config.FromContext(ctx).Domain
 	rLabels := r.Labels
 	//domain := domainConfig.LookupDomainForLabels(rLabels)
@@ -110,7 +110,7 @@ func DomainNameTODO(ctx context.Context, r metav1.ObjectMeta, name string, domai
 	data := network.DomainTemplateValues{
 		Name:        name,
 		Namespace:   r.Namespace,
-		Domain:      domain,
+		Domain:      domain.Spec.Suffix,
 		Annotations: annotations,
 		Labels:      rLabels,
 	}
