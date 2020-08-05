@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	net "knative.dev/networking/pkg/apis/networking"
-	netv1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	networkinglisters "knative.dev/networking/pkg/client/listers/networking/v1alpha1"
 	"knative.dev/pkg/ptr"
 	"knative.dev/serving/pkg/apis/serving"
@@ -60,7 +59,7 @@ type Config struct {
 	Targets map[string]RevisionTargets
 
 	// Visibility of the traffic targets.
-	Visibility map[string]netv1alpha1.IngressVisibility
+	Visibility map[string]string
 
 	// A list traffic targets, flattened to the Revision level.  This
 	// is used to populate the Route.Status.TrafficTarget field.
@@ -115,7 +114,7 @@ func (t *Config) GetRevisionTrafficTargets(ctx context.Context, r *v1.Route, rl 
 				return nil, err
 			}
 
-			labels.SetVisibility(meta, t.Visibility[tt.Tag] == netv1alpha1.IngressVisibilityClusterLocal)
+			labels.SetLabel(meta, serving.VisibilityLabelKey, t.Visibility[tt.Tag])
 
 			// http is currently the only supported scheme
 			fullDomain, err := domains.NewResolver(rl, dl).DomainNameFromTemplate(ctx, *meta, hostname)

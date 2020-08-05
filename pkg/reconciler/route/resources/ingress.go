@@ -87,7 +87,7 @@ func MakeIngressSpec(
 	r *servingv1.Route,
 	tls []netv1alpha1.IngressTLS,
 	targets map[string]traffic.RevisionTargets,
-	visibility map[string]netv1alpha1.IngressVisibility,
+	visibility map[string]string,
 	resolver *domains.Resolver,
 	acmeChallenges ...netv1alpha1.HTTP01Challenge,
 ) (netv1alpha1.IngressSpec, error) {
@@ -108,9 +108,11 @@ func MakeIngressSpec(
 	for _, name := range names {
 		visibilities := []netv1alpha1.IngressVisibility{netv1alpha1.IngressVisibilityClusterLocal}
 		// If this is a public target (or not being marked as cluster-local), we also make public rule.
-		if v, ok := visibility[name]; !ok || v == netv1alpha1.IngressVisibilityExternalIP {
-			visibilities = append(visibilities, netv1alpha1.IngressVisibilityExternalIP)
-		}
+		/*
+			if v, ok := visibility[name]; !ok || v == netv1alpha1.IngressVisibilityExternalIP {
+				visibilities = append(visibilities, netv1alpha1.IngressVisibilityExternalIP)
+			}
+		*/
 		for _, visibility := range visibilities {
 			domain, err := routeDomain(ctx, name, r, visibility, resolver)
 			if err != nil {

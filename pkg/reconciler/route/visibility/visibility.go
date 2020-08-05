@@ -20,27 +20,26 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apilabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	listers "k8s.io/client-go/listers/core/v1"
-	netv1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
-	"knative.dev/pkg/network"
+	networkinglisters "knative.dev/networking/pkg/client/listers/networking/v1alpha1"
 	"knative.dev/serving/pkg/apis/serving"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
-	"knative.dev/serving/pkg/reconciler/route/config"
 	"knative.dev/serving/pkg/reconciler/route/domains"
-	"knative.dev/serving/pkg/reconciler/route/resources/labels"
 	"knative.dev/serving/pkg/reconciler/route/traffic"
 )
 
 // Resolver resolves the visibility of traffic targets, based on both the Route and placeholder Services labels.
 type Resolver struct {
 	serviceLister listers.ServiceLister
+	realmLister   networkinglisters.RealmLister
 }
 
 // NewResolver returns a new Resolver.
-func NewResolver(l listers.ServiceLister) *Resolver {
-	return &Resolver{serviceLister: l}
+func NewResolver(sl listers.ServiceLister, rl networkinglisters.RealmLister) *Resolver {
+	return &Resolver{serviceLister: sl, realmLister: rl}
 }
 
 func (b *Resolver) getServices(route *v1.Route) (map[string]*corev1.Service, error) {
@@ -62,13 +61,13 @@ func (b *Resolver) getServices(route *v1.Route) (map[string]*corev1.Service, err
 	return serviceCopy, err
 }
 
-func (b *Resolver) routeVisibility(ctx context.Context, route *v1.Route) netv1alpha1.IngressVisibility {
-	domainConfig := config.FromContext(ctx).Domain
-	domain := domainConfig.LookupDomainForLabels(route.Labels)
-	if domain == "svc."+network.GetClusterDomainName() {
-		return netv1alpha1.IngressVisibilityClusterLocal
+// visibility adds Domain name to visibility
+func (b *Resolver) visibility(meta metav1.ObjectMeta) string {
+	realmName := "default" // TODO
+	if rname := meta.Labels[serving.VisibilityLabelKey]; rname != "" {
+		realmName = rname
 	}
-	return netv1alpha1.IngressVisibilityExternalIP
+	return realmName
 }
 
 func trafficNames(route *v1.Route) sets.String {
@@ -80,9 +79,9 @@ func trafficNames(route *v1.Route) sets.String {
 }
 
 // GetVisibility returns a map from traffic target name to their corresponding netv1alpha1.IngressVisibility.
-func (b *Resolver) GetVisibility(ctx context.Context, route *v1.Route) (map[string]netv1alpha1.IngressVisibility, error) {
+func (b *Resolver) GetVisibility(ctx context.Context, route *v1.Route) (map[string]string, error) {
 	// Find out the default visibility of the Route.
-	defaultVisibility := b.routeVisibility(ctx, route)
+	defaultVisibility := b.visibility(route.ObjectMeta)
 
 	// Get all the placeholder Services to check for additional visibility settings.
 	services, err := b.getServices(route)
@@ -90,29 +89,28 @@ func (b *Resolver) GetVisibility(ctx context.Context, route *v1.Route) (map[stri
 		return nil, err
 	}
 	trafficNames := trafficNames(route)
-	m := make(map[string]netv1alpha1.IngressVisibility, trafficNames.Len())
+	m := make(map[string]string, trafficNames.Len())
 	for tt := range trafficNames {
 		hostname, err := domains.HostnameFromTemplate(ctx, route.Name, tt)
 		if err != nil {
 			return nil, err
 		}
-		ttVisibility := netv1alpha1.IngressVisibilityExternalIP
+		ttVisibility := defaultVisibility
 		// Is there a visibility setting on the placeholder Service?
 		if svc, ok := services[hostname]; ok {
-			if labels.IsObjectLocalVisibility(svc.ObjectMeta) {
-				ttVisibility = netv1alpha1.IngressVisibilityClusterLocal
-			}
+			ttVisibility = b.visibility(svc.ObjectMeta)
 		}
-
-		// Now, choose the lowest visibility.
-		m[tt] = minVisibility(ttVisibility, defaultVisibility)
+		// TODO: choose the lowest visibility?
+		m[tt] = ttVisibility
 	}
 	return m, nil
 }
 
+/* TODO
 func minVisibility(a, b netv1alpha1.IngressVisibility) netv1alpha1.IngressVisibility {
 	if a == netv1alpha1.IngressVisibilityClusterLocal || b == netv1alpha1.IngressVisibilityClusterLocal {
 		return netv1alpha1.IngressVisibilityClusterLocal
 	}
 	return a
 }
+*/

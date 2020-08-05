@@ -49,7 +49,6 @@ import (
 	"knative.dev/serving/pkg/reconciler/route/config"
 	"knative.dev/serving/pkg/reconciler/route/domains"
 	"knative.dev/serving/pkg/reconciler/route/resources"
-	"knative.dev/serving/pkg/reconciler/route/resources/labels"
 	resourcenames "knative.dev/serving/pkg/reconciler/route/resources/names"
 	"knative.dev/serving/pkg/reconciler/route/traffic"
 	"knative.dev/serving/pkg/reconciler/route/visibility"
@@ -277,7 +276,7 @@ func (c *Reconciler) configureTraffic(ctx context.Context, r *v1.Route) (*traffi
 	}
 	// Augment traffic configuration with visibility information.  Do not overwrite trafficErr,
 	// since we will use it later.
-	visibility, err := visibility.NewResolver(c.serviceLister).GetVisibility(ctx, r)
+	visibility, err := visibility.NewResolver(c.serviceLister, c.realmLister).GetVisibility(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -342,11 +341,10 @@ func (c *Reconciler) configureTraffic(ctx context.Context, r *v1.Route) (*traffi
 	return t, nil
 }
 
-func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, visibility map[string]netv1alpha1.IngressVisibility) error {
-	isClusterLocal := visibility[traffic.DefaultTarget] == netv1alpha1.IngressVisibilityClusterLocal
-
+func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, visibility map[string]string) error {
 	mainRouteMeta := route.ObjectMeta.DeepCopy()
-	labels.SetVisibility(mainRouteMeta, isClusterLocal)
+	//  TODO?
+	// labels.SetVisibility(mainRouteMeta, isClusterLocal)
 
 	host, err := domains.NewResolver(c.realmLister, c.domainLister).DomainNameFromTemplate(ctx, *mainRouteMeta, route.Name)
 	if err != nil {

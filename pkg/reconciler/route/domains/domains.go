@@ -25,7 +25,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	network "knative.dev/networking/pkg"
-	netv1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	networkinglisters "knative.dev/networking/pkg/client/listers/networking/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgnet "knative.dev/pkg/network"
@@ -50,7 +49,7 @@ func NewResolver(rl networkinglisters.RealmLister, dl networkinglisters.DomainLi
 }
 
 // GetAllDomainsAndTags returns all of the domains and tags(including subdomains) associated with a Route
-func (b *Resolver) GetAllDomainsAndTags(ctx context.Context, r *v1.Route, names []string, visibility map[string]netv1alpha1.IngressVisibility) (map[string]string, error) {
+func (b *Resolver) GetAllDomainsAndTags(ctx context.Context, r *v1.Route, names []string, visibility map[string]string) (map[string]string, error) {
 	domainTagMap := make(map[string]string)
 
 	for _, name := range names {
@@ -61,7 +60,7 @@ func (b *Resolver) GetAllDomainsAndTags(ctx context.Context, r *v1.Route, names 
 			return nil, err
 		}
 
-		labels.SetVisibility(meta, visibility[name] == netv1alpha1.IngressVisibilityClusterLocal)
+		labels.SetLabel(meta, serving.VisibilityLabelKey, visibility[name])
 
 		subDomain, err := b.DomainNameFromTemplate(ctx, *meta, hostname)
 		if err != nil {
