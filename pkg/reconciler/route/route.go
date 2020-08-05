@@ -40,7 +40,6 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 	cfgmap "knative.dev/serving/pkg/apis/config"
-	"knative.dev/serving/pkg/apis/serving"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
 	clientset "knative.dev/serving/pkg/client/clientset/versioned"
 	routereconciler "knative.dev/serving/pkg/client/injection/reconciler/serving/v1/route"
@@ -167,11 +166,6 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1.Route) pkgreconcil
 
 func (c *Reconciler) reconcileIngressResources(ctx context.Context, r *v1.Route, tc *traffic.Config, tls []netv1alpha1.IngressTLS,
 	ingressClass string, acmeChallenges ...netv1alpha1.HTTP01Challenge) (*netv1alpha1.Ingress, error) {
-
-	realmName := r.Annotations[serving.VisibilityLabelKey]
-	if realmName == "" {
-		realmName = "default"
-	}
 
 	desired, err := resources.MakeIngress(ctx, r, tc, tls, ingressClass, domains.NewResolver(c.realmLister, c.domainLister), acmeChallenges...)
 	if err != nil {
@@ -353,11 +347,6 @@ func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, 
 
 	mainRouteMeta := route.ObjectMeta.DeepCopy()
 	labels.SetVisibility(mainRouteMeta, isClusterLocal)
-
-	realmName := route.Annotations[serving.VisibilityLabelKey]
-	if realmName == "" {
-		realmName = "default"
-	}
 
 	host, err := domains.NewResolver(c.realmLister, c.domainLister).DomainNameFromTemplate(ctx, *mainRouteMeta, route.Name)
 	if err != nil {

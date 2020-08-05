@@ -98,17 +98,11 @@ func (b *Resolver) DomainNameFromTemplate(ctx context.Context, r metav1.ObjectMe
 	// domain template, use the default one
 	if visibility := rLabels[serving.VisibilityLabelKey]; visibility != "" {
 		// TODO:
-		//realms, err := c.realmLister.List(labels.Everything())
-
-		/*
-		   realm, err := c.realmLister.Get(realmName)
-		   if err != nil {
-		           return err
-		   }
-		*/
-
-		//domain, _ := c.domainLister.Get(realm.Spec.External)
-		domain, err := b.domainLister.Get(visibility)
+		realm, err := b.realmLister.Get(visibility)
+		if err != nil {
+			return "", err
+		}
+		domain, err := b.domainLister.Get(realm.Spec.External)
 		if err != nil {
 			return "", err
 		}
