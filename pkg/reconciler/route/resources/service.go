@@ -53,25 +53,22 @@ func SelectorFromRoute(route *v1.Route) labels.Selector {
 
 // MakeK8sPlaceholderService creates a placeholder Service to prevent naming collisions. It's owned by the
 // provided v1.Route. The purpose of this service is to provide a placeholder domain name for Istio routing.
-func MakeK8sPlaceholderService(ctx context.Context, route *v1.Route, targetName string) (*corev1.Service, error) {
-	/*
-		hostname, err := domains.HostnameFromTemplate(ctx, route.Name, targetName)
-		if err != nil {
-			return nil, err
-		}
-			fullName, err := domains.LocalDomainNameFromTemplate(ctx, hostname)
-			if err != nil {
-				return nil, err
-			}
-	*/
-
+func MakeK8sPlaceholderService(ctx context.Context, route *v1.Route, targetName string, resolver *domains.Resolver) (*corev1.Service, error) {
+	hostname, err := domains.HostnameFromTemplate(ctx, route.Name, targetName)
+	if err != nil {
+		return nil, err
+	}
+	fullName, err := resolver.DomainNameFromTemplate(ctx, route.ObjectMeta, hostname)
+	if err != nil {
+		return nil, err
+	}
 	service, err := makeK8sService(ctx, route, targetName)
 	if err != nil {
 		return nil, err
 	}
 	service.Spec = corev1.ServiceSpec{
 		Type:            corev1.ServiceTypeExternalName,
-		ExternalName:    "cluster-local-gateway.istio-system.svc.cluster.local",
+		ExternalName:    fullName,
 		SessionAffinity: corev1.ServiceAffinityNone,
 	}
 

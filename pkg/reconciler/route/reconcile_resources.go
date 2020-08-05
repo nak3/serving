@@ -35,6 +35,7 @@ import (
 	"knative.dev/pkg/logging"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
 	"knative.dev/serving/pkg/reconciler/route/config"
+	"knative.dev/serving/pkg/reconciler/route/domains"
 	"knative.dev/serving/pkg/reconciler/route/resources"
 	"knative.dev/serving/pkg/reconciler/route/traffic"
 )
@@ -105,7 +106,7 @@ func (c *Reconciler) reconcilePlaceholderServices(ctx context.Context, route *v1
 
 	services := make([]*corev1.Service, 0, names.Len())
 	for _, name := range names.List() {
-		desiredService, err := resources.MakeK8sPlaceholderService(ctx, route, name)
+		desiredService, err := resources.MakeK8sPlaceholderService(ctx, route, name, domains.NewResolver(c.realmLister, c.domainLister))
 		if err != nil {
 			logger.Warnw("Failed to construct placeholder k8s service", zap.Error(err))
 			return nil, err

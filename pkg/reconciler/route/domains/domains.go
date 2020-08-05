@@ -126,25 +126,6 @@ func (b *Resolver) DomainNameFromTemplate(ctx context.Context, r metav1.ObjectMe
 	return buf.String(), nil
 }
 
-func LocalDomainNameFromTemplate(ctx context.Context, name string) (string, error) {
-	data := network.DomainTemplateValues{
-		Name:      name,
-		Namespace: "placeholder",
-		Domain:    "placeholder.example.com",
-	}
-
-	buf := bytes.Buffer{}
-
-	var templ *template.Template
-	templ = template.Must(template.New("domain-template").Parse(
-		network.DefaultDomainTemplate))
-
-	if err := templ.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("error executing the DomainTemplate: %w", err)
-	}
-	return buf.String(), nil
-}
-
 // HostnameFromTemplate generates domain name base on the template specified in the `config-network` ConfigMap.
 // name is the "subdomain" which will be referred as the "name" in the template
 func HostnameFromTemplate(ctx context.Context, name string, tag string) (string, error) {
