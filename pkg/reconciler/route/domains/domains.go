@@ -25,6 +25,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	network "knative.dev/networking/pkg"
+	networkingv1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	networkinglisters "knative.dev/networking/pkg/client/listers/networking/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgnet "knative.dev/pkg/network"
@@ -71,6 +72,10 @@ func (b *Resolver) GetAllDomainsAndTags(ctx context.Context, r *v1.Route, names 
 	return domainTagMap, nil
 }
 
+func (b *Resolver) GetRealm(realmName string) (*networkingv1alpha1.Realm, error) {
+	return b.realmLister.Get(realmName)
+}
+
 // DomainNameFromTemplate generates domain name base on the template specified in the `config-network` ConfigMap.
 // name is the "subdomain" which will be referred as the "name" in the template
 func (b *Resolver) DomainNameFromTemplate(ctx context.Context, r metav1.ObjectMeta, name string) (string, error) {
@@ -93,23 +98,25 @@ func (b *Resolver) DomainNameFromTemplate(ctx context.Context, r metav1.ObjectMe
 	buf := bytes.Buffer{}
 
 	var templ *template.Template
+	visibility := "default" // TODO
+	if v := rLabels[serving.VisibilityLabelKey]; v != "" {
+		visibility = v
+	}
+	realm, err := b.realmLister.Get(visibility)
+	if err != nil {
+		return "", err
+	}
 	// If the route is "cluster local" then don't use the user-defined
 	// domain template, use the default one
-	if visibility := rLabels[serving.VisibilityLabelKey]; visibility != "" {
-		// TODO:
-		realm, err := b.realmLister.Get(visibility)
-		if err != nil {
-			return "", err
-		}
+	if realm.Spec.External == "" {
+		templ = template.Must(template.New("domain-template").Parse(
+			network.DefaultDomainTemplate))
+	} else {
 		domain, err := b.domainLister.Get(realm.Spec.External)
 		if err != nil {
 			return "", err
 		}
 		data.Domain = domain.Spec.Suffix
-	} else if rLabels[serving.VisibilityLabelKey] == serving.VisibilityClusterLocal {
-		templ = template.Must(template.New("domain-template").Parse(
-			network.DefaultDomainTemplate))
-	} else {
 		templ = networkConfig.GetDomainTemplate()
 	}
 

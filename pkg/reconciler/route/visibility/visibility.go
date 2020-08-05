@@ -63,7 +63,7 @@ func (b *Resolver) getServices(route *v1.Route) (map[string]*corev1.Service, err
 
 // visibility adds Domain name to visibility
 func (b *Resolver) visibility(meta metav1.ObjectMeta) string {
-	realmName := "default" // TODO
+	realmName := "default" // TODO from configmap?
 	if rname := meta.Labels[serving.VisibilityLabelKey]; rname != "" {
 		realmName = rname
 	}

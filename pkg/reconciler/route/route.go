@@ -40,6 +40,7 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/tracker"
 	cfgmap "knative.dev/serving/pkg/apis/config"
+	"knative.dev/serving/pkg/apis/serving"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
 	clientset "knative.dev/serving/pkg/client/clientset/versioned"
 	routereconciler "knative.dev/serving/pkg/client/injection/reconciler/serving/v1/route"
@@ -49,6 +50,7 @@ import (
 	"knative.dev/serving/pkg/reconciler/route/config"
 	"knative.dev/serving/pkg/reconciler/route/domains"
 	"knative.dev/serving/pkg/reconciler/route/resources"
+	"knative.dev/serving/pkg/reconciler/route/resources/labels"
 	resourcenames "knative.dev/serving/pkg/reconciler/route/resources/names"
 	"knative.dev/serving/pkg/reconciler/route/traffic"
 	"knative.dev/serving/pkg/reconciler/route/visibility"
@@ -343,8 +345,8 @@ func (c *Reconciler) configureTraffic(ctx context.Context, r *v1.Route) (*traffi
 
 func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, visibility map[string]string) error {
 	mainRouteMeta := route.ObjectMeta.DeepCopy()
-	//  TODO?
-	// labels.SetVisibility(mainRouteMeta, isClusterLocal)
+
+	labels.SetLabel(mainRouteMeta, serving.VisibilityLabelKey, visibility[traffic.DefaultTarget])
 
 	host, err := domains.NewResolver(c.realmLister, c.domainLister).DomainNameFromTemplate(ctx, *mainRouteMeta, route.Name)
 	if err != nil {

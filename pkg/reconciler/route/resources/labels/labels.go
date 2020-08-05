@@ -18,17 +18,7 @@ package labels
 
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/serving/pkg/apis/serving"
 )
-
-// SetVisibility sets the visibility on an ObjectMeta
-func SetVisibility(meta *v1.ObjectMeta, isClusterLocal bool) {
-	if isClusterLocal {
-		SetLabel(meta, serving.VisibilityLabelKey, serving.VisibilityClusterLocal)
-	} else {
-		DeleteLabel(meta, serving.VisibilityLabelKey)
-	}
-}
 
 // SetLabel sets/update the label of the an ObjectMeta
 func SetLabel(meta *v1.ObjectMeta, key string, value string) {
