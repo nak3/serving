@@ -175,31 +175,7 @@ func (c *Reconciler) reconcileIngressResources(ctx context.Context, r *v1.Route,
 		realmName = "default"
 	}
 
-	// TODO:
-	//realms, err := c.realmLister.List(labels.Everything())
-	/*
-		realm, err := c.realmLister.Get(realmName)
-		if err != nil {
-			return nil, err
-		}
-
-		domainEx, _ := c.domainLister.Get(realm.Spec.External)
-	*/
-	domainEx, err := c.domainLister.Get("istio-external")
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("######## %+v\n", domainEx) // output for debug
-	/*
-		domainIn, _ := c.domainLister.Get(realm.Spec.Internal)
-		if err != nil {
-			return nil, err
-		}
-	*/
-	domainMap := map[bool]*netv1alpha1.Domain{true: domainEx, false: domainEx}
-
-	desired, err := resources.MakeIngress(ctx, r, tc, tls, ingressClass, domainMap, acmeChallenges...)
+	desired, err := resources.MakeIngress(ctx, r, tc, tls, ingressClass, domains.NewResolver(c.realmLister, c.domainLister), acmeChallenges...)
 	if err != nil {
 		return nil, err
 	}
@@ -385,35 +361,7 @@ func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, 
 		realmName = "default"
 	}
 
-	// TODO:
-	//realms, err := c.realmLister.List(labels.Everything())
-
-	/*
-		realm, err := c.realmLister.Get(realmName)
-		if err != nil {
-			return err
-		}
-	*/
-
-	//	logger.Info("### debug: ", realm)
-
-	//	domainEx := realm.Spec.External
-	//	domainIn := realm.Spec.Cluster
-
-	//	logger.Info("### domainEx: ", domainEx)
-	//	logger.Info("### domainIn: ", domainIn)
-
-	//domain, _ := c.domainLister.Get(realm.Spec.External)
-	domain, err := c.domainLister.Get("istio-external")
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("0. domain ######### %#v\n", domain)                         // output for debug
-	fmt.Printf("0. domain.spec ######### %#v\n", domain.Spec)               // output for debug
-	fmt.Printf("0. domain.spec.suffix ######### %#v\n", domain.Spec.Suffix) // output for debug
-
-	host, err := domains.DomainNameFromRealm(ctx, *mainRouteMeta, route.Name, domain)
+	host, err := domains.NewResolver(c.realmLister, c.domainLister).DomainNameFromTemplate(ctx, *mainRouteMeta, route.Name)
 	if err != nil {
 		return err
 	}

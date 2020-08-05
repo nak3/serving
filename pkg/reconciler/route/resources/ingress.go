@@ -55,10 +55,10 @@ func MakeIngress(
 	tc *traffic.Config,
 	tls []netv1alpha1.IngressTLS,
 	ingressClass string,
-	domainMap map[bool]*netv1alpha1.Domain,
+	resolver *domains.Resolver,
 	acmeChallenges ...netv1alpha1.HTTP01Challenge,
 ) (*netv1alpha1.Ingress, error) {
-	spec, err := MakeIngressSpec(ctx, r, tls, tc.Targets, tc.Visibility, domainMap, acmeChallenges...)
+	spec, err := MakeIngressSpec(ctx, r, tls, tc.Targets, tc.Visibility, resolver, acmeChallenges...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func MakeIngressSpec(
 	tls []netv1alpha1.IngressTLS,
 	targets map[string]traffic.RevisionTargets,
 	visibility map[string]netv1alpha1.IngressVisibility,
-	domainMap map[bool]*netv1alpha1.Domain,
+	resolver *domains.Resolver,
 	acmeChallenges ...netv1alpha1.HTTP01Challenge,
 ) (netv1alpha1.IngressSpec, error) {
 	// Domain should have been specified in route status
@@ -112,7 +112,7 @@ func MakeIngressSpec(
 			visibilities = append(visibilities, netv1alpha1.IngressVisibilityExternalIP)
 		}
 		for _, visibility := range visibilities {
-			domain, err := routeDomain(ctx, name, r, visibility, domainMap)
+			domain, err := routeDomain(ctx, name, r, visibility, resolver)
 			if err != nil {
 				return netv1alpha1.IngressSpec{}, err
 			}
@@ -169,7 +169,7 @@ func getChallengeHosts(challenges []netv1alpha1.HTTP01Challenge) map[string]netv
 	return c
 }
 
-func routeDomain(ctx context.Context, targetName string, r *servingv1.Route, visibility netv1alpha1.IngressVisibility, domainMap map[bool]*netv1alpha1.Domain) (string, error) {
+func routeDomain(ctx context.Context, targetName string, r *servingv1.Route, visibility netv1alpha1.IngressVisibility, resolver *domains.Resolver) (string, error) {
 	hostname, err := domains.HostnameFromTemplate(ctx, r.Name, targetName)
 	if err != nil {
 		return "", err
@@ -179,7 +179,7 @@ func routeDomain(ctx context.Context, targetName string, r *servingv1.Route, vis
 	isClusterLocal := visibility == netv1alpha1.IngressVisibilityClusterLocal
 	labels.SetVisibility(meta, isClusterLocal)
 
-	return domains.DomainNameFromRealm(ctx, *meta, hostname, domainMap[isClusterLocal])
+	return resolver.DomainNameFromTemplate(ctx, *meta, hostname)
 }
 
 func makeACMEIngressPaths(challenges map[string]netv1alpha1.HTTP01Challenge, domains []string) []netv1alpha1.HTTPIngressPath {
