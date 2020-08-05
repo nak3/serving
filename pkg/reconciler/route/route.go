@@ -17,8 +17,6 @@ limitations under the License.
 package route
 
 import (
-	"fmt"
-
 	"context"
 	"sort"
 	"strings"
