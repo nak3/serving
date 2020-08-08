@@ -166,6 +166,7 @@ func TestBuildTrafficConfigurationVanilla(t *testing.T) {
 		Revisions: map[string]*v1.Revision{
 			goodNewRev.Name: goodNewRev,
 		},
+		Domain: map[string]Domains{"": Domains{}},
 	}
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(tts))); err != nil {
 		t.Errorf("Unexpected error %v", err)
@@ -208,6 +209,7 @@ func TestBuildTrafficConfiguration_NoNameRevision(t *testing.T) {
 		}},
 		Configurations: map[string]*v1.Configuration{goodConfig.Name: goodConfig},
 		Revisions:      map[string]*v1.Revision{goodNewRev.Name: goodNewRev},
+		Domain:         map[string]Domains{"": Domains{}},
 	}
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(tts))); err != nil {
 		t.Errorf("Unexpected error %v", err)
@@ -251,6 +253,8 @@ func TestBuildTrafficConfiguration_VanillaScaledToZero(t *testing.T) {
 		Revisions: map[string]*v1.Revision{
 			inactiveRev.Name: inactiveRev,
 		},
+
+		Domain: map[string]Domains{"": Domains{}},
 	}
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(tts))); err != nil {
 		t.Errorf("Unexpected error %v", err)
@@ -310,6 +314,7 @@ func TestBuildTrafficConfiguration_TwoConfigs(t *testing.T) {
 			goodNewRev.Name: goodNewRev,
 			niceNewRev.Name: niceNewRev,
 		},
+		Domain: map[string]Domains{"": Domains{}},
 	}
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
 		ConfigurationName: niceConfig.Name,
@@ -374,6 +379,7 @@ func TestBuildTrafficConfiguration_Canary(t *testing.T) {
 			goodOldRev.Name: goodOldRev,
 			goodNewRev.Name: goodNewRev,
 		},
+		Domain: map[string]Domains{"": Domains{}},
 	}
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
 		RevisionName: goodOldRev.Name,
@@ -485,6 +491,7 @@ func TestBuildTrafficConfiguration_Consolidated(t *testing.T) {
 			goodOldRev.Name: goodOldRev,
 			goodNewRev.Name: goodNewRev,
 		},
+		Domain: map[string]Domains{"": Domains{}},
 	}
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
 		Tag:          "one",
@@ -555,6 +562,7 @@ func TestBuildTrafficConfiguration_TwoFixedRevisions(t *testing.T) {
 			goodNewRev.Name: goodNewRev,
 			goodOldRev.Name: goodOldRev,
 		},
+		Domain: map[string]Domains{"": Domains{}},
 	}
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
 		RevisionName: goodOldRev.Name,
@@ -620,6 +628,7 @@ func TestBuildTrafficConfiguration_TwoFixedRevisionsFromTwoConfigurations(t *tes
 			goodNewRev.Name: goodNewRev,
 			niceNewRev.Name: niceNewRev,
 		},
+		Domain: map[string]Domains{"": Domains{}},
 	}
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
 		RevisionName: goodNewRev.Name,
@@ -726,6 +735,7 @@ func TestBuildTrafficConfiguration_Preliminary(t *testing.T) {
 			goodNewRev.Name: goodNewRev,
 			niceNewRev.Name: niceNewRev,
 		},
+		Domain: map[string]Domains{"": Domains{}},
 	}
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
 		RevisionName: goodOldRev.Name,
@@ -759,6 +769,7 @@ func TestBuildTrafficConfiguration_MissingConfig(t *testing.T) {
 			Name:       missingConfig.Name,
 			Namespace:  missingConfig.Namespace,
 		}},
+		Domain: map[string]Domains{"": Domains{}},
 	}
 
 	expectedErr := errMissingConfiguration(missingConfig.Name)
@@ -784,6 +795,7 @@ func TestBuildTrafficConfiguration_NotRoutableRevision(t *testing.T) {
 		Targets:        map[string]RevisionTargets{},
 		Configurations: map[string]*v1.Configuration{},
 		Revisions:      map[string]*v1.Revision{unreadyRev.Name: unreadyRev},
+		Domain:         map[string]Domains{"": Domains{}},
 	}
 	expectedErr := errUnreadyRevision(unreadyRev)
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
@@ -801,6 +813,7 @@ func TestBuildTrafficConfiguration_NotRoutableConfiguration(t *testing.T) {
 		Targets:        map[string]RevisionTargets{},
 		Configurations: map[string]*v1.Configuration{unreadyConfig.Name: unreadyConfig},
 		Revisions:      map[string]*v1.Revision{},
+		Domain:         map[string]Domains{"": Domains{}},
 	}
 	expectedErr := errUnreadyConfiguration(unreadyConfig)
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
@@ -820,6 +833,7 @@ func TestBuildTrafficConfiguration_EmptyConfiguration(t *testing.T) {
 			emptyConfig.Name: emptyConfig,
 		},
 		Revisions: map[string]*v1.Revision{},
+		Domain:    map[string]Domains{"": Domains{}},
 	}
 
 	expectedErr := errUnreadyConfiguration(emptyConfig)
@@ -841,6 +855,7 @@ func TestBuildTrafficConfiguration_EmptyAndFailedConfigurations(t *testing.T) {
 			failedConfig.Name: failedConfig,
 		},
 		Revisions: map[string]*v1.Revision{},
+		Domain:    map[string]Domains{"": Domains{}},
 	}
 	expectedErr := errUnreadyConfiguration(failedConfig)
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
@@ -864,6 +879,7 @@ func TestBuildTrafficConfiguration_FailedAndEmptyConfigurations(t *testing.T) {
 			failedConfig.Name: failedConfig,
 		},
 		Revisions: map[string]*v1.Revision{},
+		Domain:    map[string]Domains{"": Domains{}},
 	}
 	expectedErr := errUnreadyConfiguration(failedConfig)
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
@@ -890,6 +906,7 @@ func TestBuildTrafficConfiguration_MissingRevision(t *testing.T) {
 			Name:       missingRev.Name,
 			Namespace:  missingRev.Namespace,
 		}},
+		Domain: map[string]Domains{"": Domains{}},
 	}
 	expectedErr := errMissingRevision(missingRev.Name)
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, testRouteWithTrafficTargets(WithSpecTraffic(v1.TrafficTarget{
@@ -962,7 +979,8 @@ func TestRoundTripping(t *testing.T) {
 	if tc, err := BuildTrafficConfiguration(configLister, revLister, route); err != nil {
 		t.Errorf("Unexpected error %v", err)
 	} else {
-		targets, err := tc.GetRevisionTrafficTargets(getContext(), route)
+		tc.Domain = map[string]Domains{"alpha": Domains{"", "alpha-test-route.test.example.com"}, "beta": Domains{"", "beta-test-route.test.example.com"}}
+		targets, err := tc.GetRevisionTrafficTargets(getContext())
 		if err != nil {
 			t.Errorf("Unexpected error %v", err)
 		}

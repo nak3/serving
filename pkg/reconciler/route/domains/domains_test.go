@@ -27,7 +27,6 @@ import (
 
 	network "knative.dev/networking/pkg"
 	"knative.dev/serving/pkg/apis/serving"
-	v1 "knative.dev/serving/pkg/apis/serving/v1"
 	"knative.dev/serving/pkg/gc"
 	"knative.dev/serving/pkg/reconciler/route/config"
 )
@@ -140,7 +139,7 @@ func TestDomainNameFromTemplate(t *testing.T) {
 				delete(meta.Labels, serving.VisibilityLabelKey)
 			}
 
-			got, err := DomainNameFromTemplate(ctx, meta, tt.args.name)
+			got, err := DomainNameFromTemplate(ctx, meta, tt.args.name, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DomainNameFromTemplate() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -185,83 +184,6 @@ func TestURL(t *testing.T) {
 	}
 }
 
-func TestGetAllDomainsAndTags(t *testing.T) {
-	tests := []struct {
-		name           string
-		domainTemplate string
-		tagTemplate    string
-		want           map[string]string
-		wantErr        bool
-	}{{
-		name:           "happy case",
-		domainTemplate: "{{.Name}}.{{.Namespace}}.{{.Domain}}",
-		tagTemplate:    "{{.Name}}-{{.Tag}}",
-		want: map[string]string{
-			"myroute-target-1.default.example.com": "target-1",
-			"myroute-target-2.default.example.com": "target-2",
-			"myroute.default.example.com":          "",
-		},
-	}, {
-		name:           "another happy case",
-		domainTemplate: "{{.Name}}.{{.Namespace}}.{{.Domain}}",
-		tagTemplate:    "{{.Tag}}-{{.Name}}",
-		want: map[string]string{
-			"target-1-myroute.default.example.com": "target-1",
-			"target-2-myroute.default.example.com": "target-2",
-			"myroute.default.example.com":          "",
-		},
-	}, {
-		name:           "or appengine style",
-		domainTemplate: "{{.Name}}.{{.Namespace}}.{{.Domain}}",
-		tagTemplate:    "{{.Tag}}-dot-{{.Name}}",
-		want: map[string]string{
-			"target-1-dot-myroute.default.example.com": "target-1",
-			"target-2-dot-myroute.default.example.com": "target-2",
-			"myroute.default.example.com":              "",
-		},
-	}, {
-		name:           "bad template",
-		domainTemplate: "{{.NNName}}.{{.Namespace}}.{{.Domain}}",
-		tagTemplate:    "{{.Name}}-{{.Tag}}",
-		wantErr:        true,
-	}, {
-		name:           "bad template",
-		domainTemplate: "{{.Name}}.{{.Namespace}}.{{.Domain}}",
-		tagTemplate:    "{{.NNName}}-{{.Tag}}",
-		wantErr:        true,
-	}}
-
-	route := &v1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			SelfLink:  "/apis/serving/v1/namespaces/test/Routes/myapp",
-			Name:      "myroute",
-			Namespace: "default",
-			Labels: map[string]string{
-				"route": "myapp",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			cfg := testConfig()
-			cfg.Network.DomainTemplate = tt.domainTemplate
-			cfg.Network.TagTemplate = tt.tagTemplate
-			ctx = config.ToContext(ctx, cfg)
-
-			// here, a tag-less major domain will have empty string as the input
-			got, err := GetAllDomainsAndTags(ctx, route, []string{"", "target-1", "target-2"}, nil /* visibility */)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetAllDomains() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if diff := cmp.Diff(tt.want, got); diff != "" {
-				t.Errorf("GetAllDomains() diff (-want +got): %v", diff)
-			}
-		})
-	}
-}
 func TestIsClusterLocal(t *testing.T) {
 	tests := []struct {
 		name   string

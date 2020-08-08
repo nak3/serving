@@ -220,7 +220,9 @@ func newTestIngress(t *testing.T, r *v1.Route, trafficOpts ...func(tc *traffic.C
 				Percent:      ptr.Int64(100),
 			},
 			Active: true,
-		}}}}
+		}}},
+		Domain: map[string]traffic.Domains{"": traffic.Domains{"test-route.test-ns.svc.cluster.local", "test-route.test-ns.example.com"}},
+	}
 
 	for _, opt := range trafficOpts {
 		opt(tc)

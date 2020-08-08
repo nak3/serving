@@ -1622,7 +1622,7 @@ func TestRouteDomain(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			cfg.Network.DomainTemplate = test.Template
 
-			res, err := domains.DomainNameFromTemplate(ctx, route.ObjectMeta, route.Name)
+			res, err := domains.DomainNameFromTemplate(ctx, route.ObjectMeta, route.Name, false)
 
 			if test.Pass != (err == nil) {
 				t.Fatal("DomainNameFromTemplate supposed to fail but didn't")

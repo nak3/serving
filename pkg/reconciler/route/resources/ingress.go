@@ -18,6 +18,7 @@ package resources
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
@@ -34,8 +35,6 @@ import (
 	"knative.dev/serving/pkg/apis/serving"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"knative.dev/serving/pkg/reconciler/route/config"
-	"knative.dev/serving/pkg/reconciler/route/domains"
-	"knative.dev/serving/pkg/reconciler/route/resources/labels"
 	"knative.dev/serving/pkg/reconciler/route/resources/names"
 	"knative.dev/serving/pkg/reconciler/route/traffic"
 )
@@ -59,7 +58,7 @@ func MakeIngress(
 	ingressClass string,
 	acmeChallenges ...netv1alpha1.HTTP01Challenge,
 ) (*netv1alpha1.Ingress, error) {
-	spec, err := MakeIngressSpec(ctx, r, tls, tc.Targets, tc.Visibility, acmeChallenges...)
+	spec, err := MakeIngressSpec(ctx, r, tls, tc, acmeChallenges...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,14 +86,13 @@ func MakeIngressSpec(
 	ctx context.Context,
 	r *servingv1.Route,
 	tls []netv1alpha1.IngressTLS,
-	targets map[string]traffic.RevisionTargets,
-	visibility map[string]netv1alpha1.IngressVisibility,
+	tc *traffic.Config,
 	acmeChallenges ...netv1alpha1.HTTP01Challenge,
 ) (netv1alpha1.IngressSpec, error) {
 	// Domain should have been specified in route status
 	// before calling this func.
-	names := make([]string, 0, len(targets))
-	for name := range targets {
+	names := make([]string, 0, len(tc.Targets))
+	for name := range tc.Targets {
 		names = append(names, name)
 	}
 	// Sort the names to give things a deterministic ordering.
@@ -108,15 +106,21 @@ func MakeIngressSpec(
 	for _, name := range names {
 		visibilities := []netv1alpha1.IngressVisibility{netv1alpha1.IngressVisibilityClusterLocal}
 		// If this is a public target (or not being marked as cluster-local), we also make public rule.
-		if v, ok := visibility[name]; !ok || v == netv1alpha1.IngressVisibilityExternalIP {
+		if v, ok := tc.Visibility[name]; !ok || v == netv1alpha1.IngressVisibilityExternalIP {
 			visibilities = append(visibilities, netv1alpha1.IngressVisibilityExternalIP)
 		}
 		for _, visibility := range visibilities {
-			domain, err := routeDomain(ctx, name, r, visibility)
-			if err != nil {
-				return netv1alpha1.IngressSpec{}, err
+			domain := ""
+			if visibility == netv1alpha1.IngressVisibilityClusterLocal {
+				domain = tc.Domain[name].Internal
+			} else {
+				domain = tc.Domain[name].External
 			}
-			rule := makeIngressRule(ctx, []string{domain}, r.Namespace, visibility, targets[name])
+			if domain == "" {
+				// TODO
+				return netv1alpha1.IngressSpec{}, fmt.Errorf("not found for %v", name)
+			}
+			rule := makeIngressRule(ctx, []string{domain}, r.Namespace, visibility, tc.Targets[name])
 			if networkConfig.TagHeaderBasedRouting {
 				if rule.HTTP.Paths[0].AppendHeaders == nil {
 					rule.HTTP.Paths[0].AppendHeaders = make(map[string]string)
@@ -132,7 +136,7 @@ func MakeIngressSpec(
 					// If a request has one of the `names`(tag name) except the default path,
 					// the request will be routed via one of the ingress paths, corresponding to the tag name.
 					rule.HTTP.Paths = append(
-						makeTagBasedRoutingIngressPaths(ctx, r.Namespace, targets, names), rule.HTTP.Paths...)
+						makeTagBasedRoutingIngressPaths(ctx, r.Namespace, tc.Targets, names), rule.HTTP.Paths...)
 				} else {
 					// If a request is routed by a tag-attached hostname instead of the tag header,
 					// the request may not have the tag header "Knative-Serving-Tag",
@@ -167,19 +171,6 @@ func getChallengeHosts(challenges []netv1alpha1.HTTP01Challenge) map[string]netv
 	}
 
 	return c
-}
-
-func routeDomain(ctx context.Context, targetName string, r *servingv1.Route, visibility netv1alpha1.IngressVisibility) (string, error) {
-	hostname, err := domains.HostnameFromTemplate(ctx, r.Name, targetName)
-	if err != nil {
-		return "", err
-	}
-
-	meta := r.ObjectMeta.DeepCopy()
-	isClusterLocal := visibility == netv1alpha1.IngressVisibilityClusterLocal
-	labels.SetVisibility(meta, isClusterLocal)
-
-	return domains.DomainNameFromTemplate(ctx, *meta, hostname)
 }
 
 func makeACMEIngressPaths(challenges map[string]netv1alpha1.HTTP01Challenge, domains []string) []netv1alpha1.HTTPIngressPath {

@@ -306,7 +306,7 @@ func TestMakeK8sPlaceholderService(t *testing.T) {
 				},
 			}
 
-			got, err := MakeK8sPlaceholderService(ctx, tt.route, target.Tag)
+			got, err := MakeK8sPlaceholderService(ctx, tt.route, target.Tag, traffic.Domains{"foo-test-route.test-ns.svc.cluster.local", "foo-test-route.test-ns.example.com"})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MakeK8sPlaceholderService() error = %v, wantErr %v", err, tt.wantErr)
 				return

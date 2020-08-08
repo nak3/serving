@@ -94,13 +94,18 @@ func NewDomainFromConfigMap(configMap *corev1.ConfigMap) (*Domain, error) {
 // Since we reject configuration without a default domain, this should
 // always return a value.
 func (c *Domain) LookupDomainForLabels(labels map[string]string) string {
-	domain := ""
-	specificity := -1
 	// If we see VisibilityLabelKey sets with VisibilityClusterLocal, that
 	// will take precedence and the route will get a Cluster's Domain Name.
 	if labels[serving.VisibilityLabelKey] == serving.VisibilityClusterLocal {
 		return "svc." + network.GetClusterDomainName()
 	}
+	return c.LookupExternalDomainForLabels(labels)
+}
+
+// TODO:
+func (c *Domain) LookupExternalDomainForLabels(labels map[string]string) string {
+	domain := ""
+	specificity := -1
 	for k, selector := range c.Domains {
 		// Ignore if selector doesn't match, or decrease the specificity.
 		if !selector.Matches(labels) || selector.specificity() < specificity {

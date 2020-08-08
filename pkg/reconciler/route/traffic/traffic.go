@@ -29,7 +29,6 @@ import (
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
 	listers "knative.dev/serving/pkg/client/listers/serving/v1"
 	"knative.dev/serving/pkg/reconciler/route/domains"
-	"knative.dev/serving/pkg/reconciler/route/resources/labels"
 )
 
 const (
@@ -61,6 +60,9 @@ type Config struct {
 	// Visibility of the traffic targets.
 	Visibility map[string]netv1alpha1.IngressVisibility
 
+	// TODO: Domain name are keyed by target names.
+	Domain map[string]Domains
+
 	// A list traffic targets, flattened to the Revision level.  This
 	// is used to populate the Route.Status.TrafficTarget field.
 	revisionTargets RevisionTargets
@@ -72,6 +74,11 @@ type Config struct {
 	// MissingTargets are references to Configuration's or Revision's
 	// that are missing
 	MissingTargets []corev1.ObjectReference
+}
+
+type Domains struct {
+	Internal string
+	External string
 }
 
 // BuildTrafficConfiguration consolidates and flattens the Route.Spec.Traffic to the Revision-level. It also provides a
@@ -89,8 +96,47 @@ func BuildTrafficConfiguration(configLister listers.ConfigurationLister, revList
 	return builder.build()
 }
 
+func (t *Config) BuildDomain(ctx context.Context, r *v1.Route) error {
+	in, ex, err := t.builDomain(ctx, r, DefaultTarget)
+	if err != nil {
+		return err
+	}
+	t.Domain[DefaultTarget] = Domains{in, ex}
+
+	for _, tt := range t.revisionTargets {
+		in, ex, err := t.builDomain(ctx, r, tt.Tag)
+		if err != nil {
+			return err
+		}
+		t.Domain[tt.Tag] = Domains{in, ex}
+	}
+	return nil
+}
+
+func (t *Config) builDomain(ctx context.Context, r *v1.Route, tag string) (string, string, error) {
+	// We cannot `DeepCopy` here, since tt.TrafficTarget might contain both
+	// configuration and revision.
+	meta := r.ObjectMeta.DeepCopy()
+
+	hostname, err := domains.HostnameFromTemplate(ctx, meta.Name, tag)
+	if err != nil {
+		return "", "", err
+	}
+
+	// http is currently the only supported scheme
+	internalDomain, err := domains.DomainNameFromTemplate(ctx, *meta, hostname, true)
+	if err != nil {
+		return "", "", err
+	}
+	externalDomain, err := domains.DomainNameFromTemplate(ctx, *meta, hostname, false)
+	if err != nil {
+		return "", "", err
+	}
+	return internalDomain, externalDomain, nil
+}
+
 // GetRevisionTrafficTargets returns a list of TrafficTarget flattened to the RevisionName, and having ConfigurationName cleared out.
-func (t *Config) GetRevisionTrafficTargets(ctx context.Context, r *v1.Route) ([]v1.TrafficTarget, error) {
+func (t *Config) GetRevisionTrafficTargets(ctx context.Context) ([]v1.TrafficTarget, error) {
 	results := make([]v1.TrafficTarget, len(t.revisionTargets))
 	for i, tt := range t.revisionTargets {
 		var pp *int64
@@ -107,21 +153,12 @@ func (t *Config) GetRevisionTrafficTargets(ctx context.Context, r *v1.Route) ([]
 			LatestRevision: tt.LatestRevision,
 		}
 		if tt.Tag != "" {
-			meta := r.ObjectMeta.DeepCopy()
-
-			hostname, err := domains.HostnameFromTemplate(ctx, meta.Name, tt.Tag)
-			if err != nil {
-				return nil, err
+			if t.Visibility[tt.Tag] == netv1alpha1.IngressVisibilityClusterLocal {
+				// http is currently the only supported scheme
+				results[i].URL = domains.URL(domains.HTTPScheme, t.Domain[tt.Tag].Internal)
+			} else {
+				results[i].URL = domains.URL(domains.HTTPScheme, t.Domain[tt.Tag].External)
 			}
-
-			labels.SetVisibility(meta, t.Visibility[tt.Tag] == netv1alpha1.IngressVisibilityClusterLocal)
-
-			// http is currently the only supported scheme
-			fullDomain, err := domains.DomainNameFromTemplate(ctx, *meta, hostname)
-			if err != nil {
-				return nil, err
-			}
-			results[i].URL = domains.URL(domains.HTTPScheme, fullDomain)
 		}
 	}
 	return results, nil
@@ -348,5 +385,6 @@ func (t *configBuilder) build() (*Config, error) {
 		Configurations:  t.configurations,
 		Revisions:       t.revisions,
 		MissingTargets:  t.missingTargets,
+		Domain:          map[string]Domains{"": Domains{}},
 	}, t.deferredTargetErr
 }

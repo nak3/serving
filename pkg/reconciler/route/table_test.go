@@ -444,7 +444,7 @@ func TestReconcile(t *testing.T) {
 			func() *corev1.Service {
 				result, _ := resources.MakeK8sPlaceholderService(getContext(),
 					Route("default", "ingress-create-failure", WithConfigTarget("config"), WithRouteFinalizer),
-					"")
+					"", traffic.Domains{})
 				return result
 			}(),
 		},
@@ -2621,7 +2621,13 @@ func cfg(namespace, name string, co ...ConfigOption) *v1.Configuration {
 func simplePlaceholderK8sService(ctx context.Context, r *v1.Route, targetName string, so ...K8sServiceOption) *corev1.Service {
 	// omit the error here, as we are sure the loadbalancer info is porvided.
 	// return the service instance only, so that the result can be used in TableRow.
-	svc, _ := resources.MakeK8sPlaceholderService(ctx, r, targetName)
+
+	name := r.Name
+	if targetName != "" {
+		name = targetName + "-" + name
+	}
+	domain := traffic.Domains{name + "." + r.Namespace + ".svc.cluster.local", name + "." + r.Namespace + ".example.com"}
+	svc, _ := resources.MakeK8sPlaceholderService(ctx, r, targetName, domain)
 
 	for _, opt := range so {
 		opt(svc)
@@ -2656,6 +2662,7 @@ func ingressWithClass(r *v1.Route, tc *traffic.Config, class string, io ...Ingre
 }
 
 func baseIngressWithClass(r *v1.Route, tc *traffic.Config, class string, io ...IngressOption) *netv1alpha1.Ingress {
+	addDomainToTc(r, tc)
 	ingress, _ := resources.MakeIngress(getContext(), r, tc, nil, class)
 
 	for _, opt := range io {
@@ -2665,11 +2672,23 @@ func baseIngressWithClass(r *v1.Route, tc *traffic.Config, class string, io ...I
 	return ingress
 }
 
+func addDomainToTc(r *v1.Route, tc *traffic.Config) *traffic.Config {
+	for _, v := range r.Spec.Traffic {
+		if v.Tag != "" {
+			tc.Domain = map[string]traffic.Domains{v.Tag: traffic.Domains{v.Tag + "-" + r.Name + "." + r.Namespace + ".svc.cluster.local", v.Tag + "-" + r.Name + "." + r.Namespace + ".example.com"}}
+
+		}
+	}
+	tc.Domain = map[string]traffic.Domains{"": traffic.Domains{r.Name + "." + r.Namespace + ".svc.cluster.local", r.Name + "." + r.Namespace + ".example.com"}}
+	return tc
+}
+
 func ingressWithTLS(r *v1.Route, tc *traffic.Config, tls []netv1alpha1.IngressTLS, challenges []netv1alpha1.HTTP01Challenge, io ...IngressOption) *netv1alpha1.Ingress {
 	return baseIngressWithTLS(r, tc, tls, challenges, io...)
 }
 
 func baseIngressWithTLS(r *v1.Route, tc *traffic.Config, tls []netv1alpha1.IngressTLS, challenges []netv1alpha1.HTTP01Challenge, io ...IngressOption) *netv1alpha1.Ingress {
+	addDomainToTc(r, tc)
 	ingress, _ := resources.MakeIngress(getContext(), r, tc, tls, TestIngressClass, challenges...)
 
 	for _, opt := range io {
@@ -2680,6 +2699,7 @@ func baseIngressWithTLS(r *v1.Route, tc *traffic.Config, tls []netv1alpha1.Ingre
 }
 
 func simpleReadyIngress(r *v1.Route, tc *traffic.Config, io ...IngressOption) *netv1alpha1.Ingress {
+	addDomainToTc(r, tc)
 	ingress := ingressWithStatus(r, tc, readyIngressStatus())
 
 	for _, opt := range io {

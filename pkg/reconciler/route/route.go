@@ -49,7 +49,6 @@ import (
 	"knative.dev/serving/pkg/reconciler/route/config"
 	"knative.dev/serving/pkg/reconciler/route/domains"
 	"knative.dev/serving/pkg/reconciler/route/resources"
-	"knative.dev/serving/pkg/reconciler/route/resources/labels"
 	resourcenames "knative.dev/serving/pkg/reconciler/route/resources/names"
 	"knative.dev/serving/pkg/reconciler/route/traffic"
 	"knative.dev/serving/pkg/reconciler/route/visibility"
@@ -130,7 +129,7 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, r *v1.Route) pkgreconcil
 	}
 
 	logger.Info("Creating placeholder k8s services")
-	services, err := c.reconcilePlaceholderServices(ctx, r, traffic.Targets)
+	services, err := c.reconcilePlaceholderServices(ctx, r, traffic)
 	if err != nil {
 		return err
 	}
@@ -184,10 +183,7 @@ func (c *Reconciler) tls(ctx context.Context, host string, r *v1.Route, traffic 
 		r.Status.MarkTLSNotEnabled(v1.AutoTLSNotEnabledMessage)
 		return tls, nil, nil
 	}
-	domainToTagMap, err := domains.GetAllDomainsAndTags(ctx, r, getTrafficNames(traffic.Targets), traffic.Visibility)
-	if err != nil {
-		return nil, nil, err
-	}
+	domainToTagMap := getDomainTagMap(traffic)
 
 	for domain := range domainToTagMap {
 		if domains.IsClusterLocal(domain) {
@@ -280,10 +276,18 @@ func (c *Reconciler) configureTraffic(ctx context.Context, r *v1.Route) (*traffi
 		return nil, err
 	}
 	t.Visibility = visibility
-	// Update the Route URL.
-	if err := c.updateRouteStatusURL(ctx, r, t.Visibility); err != nil {
+	err = t.BuildDomain(ctx, r)
+	if err != nil {
 		return nil, err
 	}
+
+	// Update the Route URL.
+	if visibility[traffic.DefaultTarget] == netv1alpha1.IngressVisibilityClusterLocal {
+		r.Status.URL = &apis.URL{Scheme: "http", Host: t.Domain[traffic.DefaultTarget].Internal}
+	} else {
+		r.Status.URL = &apis.URL{Scheme: "http", Host: t.Domain[traffic.DefaultTarget].External}
+	}
+
 	// Tell our trackers to reconcile Route whenever the things referred to by our
 	// traffic stanza change. We also track missing targets since there may be
 	// race conditions were routes are reconciled before their targets appear
@@ -330,7 +334,7 @@ func (c *Reconciler) configureTraffic(ctx context.Context, r *v1.Route) (*traffi
 	logger.Info("All referred targets are routable, marking AllTrafficAssigned with traffic information.")
 
 	// Domain should already be present
-	r.Status.Traffic, err = t.GetRevisionTrafficTargets(ctx, r)
+	r.Status.Traffic, err = t.GetRevisionTrafficTargets(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -338,25 +342,6 @@ func (c *Reconciler) configureTraffic(ctx context.Context, r *v1.Route) (*traffi
 	r.Status.MarkTrafficAssigned()
 
 	return t, nil
-}
-
-func (c *Reconciler) updateRouteStatusURL(ctx context.Context, route *v1.Route, visibility map[string]netv1alpha1.IngressVisibility) error {
-	isClusterLocal := visibility[traffic.DefaultTarget] == netv1alpha1.IngressVisibilityClusterLocal
-
-	mainRouteMeta := route.ObjectMeta.DeepCopy()
-	labels.SetVisibility(mainRouteMeta, isClusterLocal)
-
-	host, err := domains.DomainNameFromTemplate(ctx, *mainRouteMeta, route.Name)
-	if err != nil {
-		return err
-	}
-
-	route.Status.URL = &apis.URL{
-		Scheme: "http",
-		Host:   host,
-	}
-
-	return nil
 }
 
 // GetNetworkingClient returns the client to access networking resources.
@@ -390,12 +375,16 @@ func objectRef(a accessor) tracker.Reference {
 	}
 }
 
-func getTrafficNames(targets map[string]traffic.RevisionTargets) []string {
-	names := []string{}
-	for name := range targets {
-		names = append(names, name)
+func getDomainTagMap(tc *traffic.Config) map[string]string {
+	domainTagMap := make(map[string]string)
+	for name := range tc.Targets {
+		if tc.Visibility[name] == netv1alpha1.IngressVisibilityClusterLocal {
+			domainTagMap[tc.Domain[name].Internal] = name
+		} else {
+			domainTagMap[tc.Domain[name].External] = name
+		}
 	}
-	return names
+	return domainTagMap
 }
 
 // Sets the traffic URL scheme to scheme if the URL matches the dnsNames.

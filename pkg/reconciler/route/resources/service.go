@@ -31,6 +31,7 @@ import (
 	"knative.dev/serving/pkg/apis/serving"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
 	"knative.dev/serving/pkg/reconciler/route/domains"
+	"knative.dev/serving/pkg/reconciler/route/traffic"
 )
 
 var errLoadBalancerNotFound = errors.New("failed to fetch loadbalancer domain/IP from ingress status")
@@ -53,14 +54,10 @@ func SelectorFromRoute(route *v1.Route) labels.Selector {
 
 // MakeK8sPlaceholderService creates a placeholder Service to prevent naming collisions. It's owned by the
 // provided v1.Route. The purpose of this service is to provide a placeholder domain name for Istio routing.
-func MakeK8sPlaceholderService(ctx context.Context, route *v1.Route, targetName string) (*corev1.Service, error) {
-	hostname, err := domains.HostnameFromTemplate(ctx, route.Name, targetName)
-	if err != nil {
-		return nil, err
-	}
-	fullName, err := domains.DomainNameFromTemplate(ctx, route.ObjectMeta, hostname)
-	if err != nil {
-		return nil, err
+func MakeK8sPlaceholderService(ctx context.Context, route *v1.Route, targetName string, domain traffic.Domains) (*corev1.Service, error) {
+	fullName := domain.External
+	if route.Labels[serving.VisibilityLabelKey] == serving.VisibilityClusterLocal {
+		fullName = domain.Internal
 	}
 
 	service, err := makeK8sService(ctx, route, targetName)

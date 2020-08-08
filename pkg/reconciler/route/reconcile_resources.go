@@ -84,7 +84,7 @@ func (c *Reconciler) deleteServices(namespace string, serviceNames sets.String) 
 	return nil
 }
 
-func (c *Reconciler) reconcilePlaceholderServices(ctx context.Context, route *v1.Route, targets map[string]traffic.RevisionTargets) ([]*corev1.Service, error) {
+func (c *Reconciler) reconcilePlaceholderServices(ctx context.Context, route *v1.Route, traffic *traffic.Config) ([]*corev1.Service, error) {
 	logger := logging.FromContext(ctx)
 	recorder := controller.GetEventRecorder(ctx)
 
@@ -96,8 +96,8 @@ func (c *Reconciler) reconcilePlaceholderServices(ctx context.Context, route *v1
 
 	ns := route.Namespace
 
-	names := make(sets.String, len(targets))
-	for name := range targets {
+	names := make(sets.String, len(traffic.Targets))
+	for name := range traffic.Targets {
 		names.Insert(name)
 	}
 
@@ -105,7 +105,7 @@ func (c *Reconciler) reconcilePlaceholderServices(ctx context.Context, route *v1
 
 	services := make([]*corev1.Service, 0, names.Len())
 	for _, name := range names.List() {
-		desiredService, err := resources.MakeK8sPlaceholderService(ctx, route, name)
+		desiredService, err := resources.MakeK8sPlaceholderService(ctx, route, name, traffic.Domain[name])
 		if err != nil {
 			logger.Warnw("Failed to construct placeholder k8s service", zap.Error(err))
 			return nil, err
