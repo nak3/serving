@@ -67,6 +67,7 @@ type Reconciler struct {
 	configurationLister listers.ConfigurationLister
 	revisionLister      listers.RevisionLister
 	serviceLister       corev1listers.ServiceLister
+	endpointsLister     corev1listers.EndpointsLister
 	ingressLister       networkinglisters.IngressLister
 	certificateLister   networkinglisters.CertificateLister
 	tracker             tracker.Interface
