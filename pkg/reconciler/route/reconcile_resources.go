@@ -337,6 +337,8 @@ func (c *Reconciler) reconcilePlaceholderService(ctx context.Context, ingress st
 	}
 
 	desiredService.Spec.Ports = ingService.Spec.Ports
+	// ClusterIP is immutable. Make sure it is not changed.
+	desiredService.Spec.ClusterIP = service.Spec.ClusterIP
 
 	// Make sure that the service has the proper specification.
 	if !equality.Semantic.DeepEqual(service.Spec, desiredService.Spec) ||
