@@ -216,7 +216,7 @@ func (c *Reconciler) reconcilePlaceholderServices(ctx context.Context, route *v1
 }
 
 func (c *Reconciler) updatePlaceholderServices(ctx context.Context, route *v1.Route, services []*corev1.Service, ingress *netv1alpha1.Ingress) error {
-	eg, _ := errgroup.WithContext(ctx)
+	eg, egCtx := errgroup.WithContext(ctx)
 	for _, service := range services {
 		service := service
 
@@ -243,15 +243,15 @@ func (c *Reconciler) updatePlaceholderServices(ctx context.Context, route *v1.Ro
 		eg.Go(func() error {
 			switch {
 			case balancer.DomainInternal != "":
-				if err := c.reconcileEndpoints(ctx, balancer.DomainInternal, service, route); err != nil {
+				if err := c.reconcileEndpoints(egCtx, balancer.DomainInternal, service, route); err != nil {
 					return err
 				}
-				return c.reconcilePlaceholderService(ctx, balancer.DomainInternal, service, route)
+				return c.reconcilePlaceholderService(egCtx, balancer.DomainInternal, service, route)
 			case balancer.Domain != "":
-				if err := c.reconcileEndpoints(ctx, balancer.Domain, service, route); err != nil {
+				if err := c.reconcileEndpoints(egCtx, balancer.Domain, service, route); err != nil {
 					return err
 				}
-				return c.reconcilePlaceholderService(ctx, balancer.Domain, service, route)
+				return c.reconcilePlaceholderService(egCtx, balancer.Domain, service, route)
 			case balancer.MeshOnly:
 				// No need to update Placeholderr service.
 			case balancer.IP != "":
