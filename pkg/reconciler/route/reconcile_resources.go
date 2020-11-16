@@ -339,12 +339,12 @@ func (c *Reconciler) reconcilePlaceholderService(ctx context.Context, ingress st
 	desiredService.Spec.Ports = ingService.Spec.Ports
 
 	// Make sure that the service has the proper specification.
-	if !equality.Semantic.DeepEqual(service.Spec, desiredService.Spec) ||
+	if !equality.Semantic.DeepEqual(service.Spec.Ports, desiredService.Spec.Ports) ||
 		!equality.Semantic.DeepEqual(service.Labels, desiredService.Labels) ||
 		!equality.Semantic.DeepEqual(service.Annotations, desiredService.Annotations) {
 		// Don't modify the informers copy.
 		existing := service.DeepCopy()
-		existing.Spec = desiredService.Spec
+		existing.Spec.Ports = desiredService.Spec.Ports
 		existing.Labels = desiredService.Labels
 		existing.Annotations = desiredService.Annotations
 		if _, err := c.kubeclient.CoreV1().Services(service.Namespace).Update(ctx, existing, metav1.UpdateOptions{}); err != nil {
