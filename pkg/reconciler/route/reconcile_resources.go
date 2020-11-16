@@ -341,9 +341,10 @@ func (c *Reconciler) reconcilePlaceholderService(ctx context.Context, ingress st
 	desiredService.Spec.ClusterIP = service.Spec.ClusterIP
 
 	// Make sure that the service has the proper specification.
-	if !equality.Semantic.DeepEqual(service.Spec, desiredService.Spec) ||
-		!equality.Semantic.DeepEqual(service.Labels, desiredService.Labels) ||
-		!equality.Semantic.DeepEqual(service.Annotations, desiredService.Annotations) {
+	if !equality.Semantic.DeepEqual(service.Spec.Ports, desiredService.Spec.Ports) {
+		//||
+		//		!equality.Semantic.DeepEqual(service.Labels, desiredService.Labels) ||
+		//		!equality.Semantic.DeepEqual(service.Annotations, desiredService.Annotations) {
 		// Don't modify the informers copy.
 		existing := service.DeepCopy()
 		existing.Spec = desiredService.Spec
