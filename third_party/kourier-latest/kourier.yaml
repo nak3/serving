@@ -356,7 +356,7 @@ data:
                     pipe:
                       path: /tmp/envoy.admin
         - name: xds_cluster
-          connect_timeout: 5s
+          connect_timeout: 0.250s
           type: strict_dns
           load_assignment:
             cluster_name: xds_cluster
